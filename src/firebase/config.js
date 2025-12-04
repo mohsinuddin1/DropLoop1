@@ -4,17 +4,37 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
-// TODO: Replace the following with your app's Firebase project configuration
+// Firebase configuration from environment variables
 const firebaseConfig = {
-    apiKey: "AIzaSyAgkH7JbHBy01QI3DWmBy213Pynk4egSa8",
-    authDomain: "droploop-1b7ff.firebaseapp.com",
-    databaseURL: "https://droploop-1b7ff-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "droploop-1b7ff",
-    storageBucket: "droploop-1b7ff.firebasestorage.app",
-    messagingSenderId: "311490534810",
-    appId: "1:311490534810:web:fc9812d2a3897c96acae23",
-    measurementId: "G-BFCKMN1D1N"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
+
+// Validate that all required environment variables are present
+const requiredEnvVars = [
+    'VITE_FIREBASE_API_KEY',
+    'VITE_FIREBASE_AUTH_DOMAIN',
+    'VITE_FIREBASE_PROJECT_ID',
+    'VITE_FIREBASE_STORAGE_BUCKET',
+    'VITE_FIREBASE_MESSAGING_SENDER_ID',
+    'VITE_FIREBASE_APP_ID'
+];
+
+const missingVars = requiredEnvVars.filter(
+    varName => !import.meta.env[varName]
+);
+
+if (missingVars.length > 0) {
+    console.error('Missing required Firebase environment variables:', missingVars);
+    console.error('Please check your .env file and ensure all VITE_FIREBASE_* variables are set.');
+    throw new Error(`Missing Firebase configuration: ${missingVars.join(', ')}`);
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
