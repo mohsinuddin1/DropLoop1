@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user matches the ID
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Users collection: 
+    // - Anyone can read (needed for profiles)
+    // - User can write their own profile
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+    }
+
+    // Posts collection:
+    // - Anyone can read (including list queries)
+    // - Authenticated users can create
+    // - Only owner can update/delete
+    match /posts/{postId} {
+      allow read: if true; // Allows both get and list operations
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    // Bids collection:
+    // - Authenticated users can read/create
+    // - Only involved parties (bidder or post owner) should ideally read, but for simplicity:
+    match /bids/{bidId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated(); // Needed for accepting/rejecting
+    }
+
+    // Reviews collection:
+    // - Anyone can read (needed to view reviews on profiles)
+    // - Authenticated users can create
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.reviewerId;
+    }
+
+    // Chats collection:
+    // - Only participants can read/write
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      allow update, delete: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+  }
+}
