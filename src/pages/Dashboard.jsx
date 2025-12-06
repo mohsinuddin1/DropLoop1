@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { db } from '../firebase/config';
 import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { Package, TrendingUp, CheckCircle, Clock, MessageSquare } from 'lucide-react';
 import ReviewModal from '../components/ReviewModal';
 
 export default function Dashboard() {
@@ -17,6 +18,7 @@ export default function Dashboard() {
     const [activeTab, setActiveTab] = useState('posts');
     const [selectedBidForReview, setSelectedBidForReview] = useState(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const listenerStartTime = useRef(Date.now()); // Track when listener starts to avoid notifying for old bids
 
     useEffect(() => {
         if (!user) return;
@@ -37,24 +39,30 @@ export default function Dashboard() {
         const receivedBidsQuery = query(collection(db, 'bids'), where('postOwnerId', '==', user.uid));
         const unsubReceivedBids = onSnapshot(receivedBidsQuery, (snapshot) => {
             const newBids = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
+
             // Check for new bids (notifications for post owner)
+            // Only notify for bids created AFTER the listener was initialized (to avoid notifying for old bids)
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const bid = change.doc.data();
-                    addNotification({
-                        id: `new-bid-${change.doc.id}-${Date.now()}`,
-                        type: 'new_bid',
-                        title: '💰 New Bid Received!',
-                        message: `${bid.bidderName} placed a bid of ₹${bid.amount}`,
-                        bidId: change.doc.id,
-                        postId: bid.postId,
-                        timestamp: new Date(),
-                        read: false
-                    });
+                    const bidTimestamp = bid.createdAt?.toMillis() || Date.now();
+
+                    // Only send notification if bid was created after listener started
+                    if (bidTimestamp > listenerStartTime.current) {
+                        addNotification({
+                            id: `new-bid-${change.doc.id}-${Date.now()}`,
+                            type: 'new_bid',
+                            title: '💰 New Bid Received!',
+                            message: `${bid.bidderName} placed a bid of ₹${bid.amount}`,
+                            bidId: change.doc.id,
+                            postId: bid.postId,
+                            timestamp: new Date(),
+                            read: false
+                        });
+                    }
                 }
             });
-            
+
             setReceivedBids(newBids);
         });
 
@@ -127,144 +135,255 @@ export default function Dashboard() {
         }
     };
 
-    return (
-        <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">My Dashboard</h1>
+    // Calculate stats
+    const activePosts = myPosts.filter(p => p.status === 'open').length;
+    const pendingBids = receivedBids.filter(b => b.status === 'pending').length;
+    const completedCount = myPosts.filter(p => p.status === 'closed').length + myBids.filter(b => b.status === 'accepted').length;
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
-                <div className="flex border-b border-gray-200">
+    return (
+        <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+                <p className="text-gray-600 mt-2">Manage your posts, bids, and deliveries</p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
+                <div className="p-6 rounded-xl bg-white border border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-500">Active Posts</p>
+                        <Package className="h-5 w-5 text-primary" />
+                    </div>
+                    <p className="text-3xl font-bold text-gray-900">{activePosts}</p>
+                </div>
+
+                <div className="p-6 rounded-xl bg-white border border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-500">Pending Bids</p>
+                        <Clock className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <p className="text-3xl font-bold text-gray-900">{pendingBids}</p>
+                </div>
+
+                <div className="p-6 rounded-xl bg-white border border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-500">My Bids</p>
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                    </div>
+                    <p className="text-3xl font-bold text-gray-900">{myBids.length}</p>
+                </div>
+
+                <div className="p-6 rounded-xl bg-white border border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-500">Completed</p>
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                    </div>
+                    <p className="text-3xl font-bold text-gray-900">{completedCount}</p>
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="space-y-6">
+                <div className="inline-flex bg-white border border-gray-200 rounded-lg p-1">
                     <button
                         onClick={() => setActiveTab('posts')}
-                        className={`flex-1 py-4 text-center font-medium text-sm ${activeTab === 'posts' ? 'bg-indigo-50 text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'posts'
+                            ? 'bg-primary text-white'
+                            : 'text-gray-700 hover:text-gray-900'
+                            }`}
                     >
-                        My Posts ({myPosts.length})
+                        My Posts
                     </button>
                     <button
                         onClick={() => setActiveTab('received')}
-                        className={`flex-1 py-4 text-center font-medium text-sm ${activeTab === 'received' ? 'bg-indigo-50 text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'received'
+                            ? 'bg-primary text-white'
+                            : 'text-gray-700 hover:text-gray-900'
+                            }`}
                     >
-                        Received Bids ({receivedBids.length})
+                        Received Bids
                     </button>
                     <button
                         onClick={() => setActiveTab('bids')}
-                        className={`flex-1 py-4 text-center font-medium text-sm ${activeTab === 'bids' ? 'bg-indigo-50 text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'bids'
+                            ? 'bg-primary text-white'
+                            : 'text-gray-700 hover:text-gray-900'
+                            }`}
                     >
-                        My Active Bids ({myBids.length})
+                        My Active Bids
                     </button>
                 </div>
 
-                <div className="p-6">
-                    {activeTab === 'posts' && (
-                        <div className="space-y-4">
-                            {myPosts.length === 0 ? (
-                                <p className="text-center text-gray-500 py-10">You haven't created any posts yet.</p>
-                            ) : (
-                                myPosts.map(post => (
-                                    <div key={post.id} className="border border-gray-200 rounded-lg p-4 flex justify-between items-center">
-                                        <div>
-                                            <h3 className="font-medium text-gray-900">
-                                                {post.type === 'travel' ? `Travel to ${post.to}` : post.itemName}
-                                            </h3>
-                                            <p className="text-sm text-gray-500">
-                                                Posted on {post.createdAt?.seconds ? format(new Date(post.createdAt.seconds * 1000), 'MMM d, yyyy') : 'Just now'}
-                                            </p>
-                                        </div>
-                                        <span className={`px-2 py-1 rounded text-xs font-medium ${post.status === 'open' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                            {post.status}
-                                        </span>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-
-                    {activeTab === 'received' && (
-                        <div className="space-y-4">
-                            {receivedBids.length === 0 ? (
-                                <p className="text-center text-gray-500 py-10">No bids received yet.</p>
-                            ) : (
-                                receivedBids.map(bid => (
-                                    <div key={bid.id} className="border border-gray-200 rounded-lg p-4">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div>
-                                                <span className="font-medium text-gray-900">{bid.bidderName}</span>
-                                                <span className="text-gray-500 text-sm"> offered </span>
-                                                <span className="font-bold text-primary">₹{bid.amount}</span>
+                {/* My Posts Tab */}
+                {activeTab === 'posts' && (
+                    <div className="space-y-4">
+                        {myPosts.length === 0 ? (
+                            <div className="p-12 text-center rounded-xl bg-white border border-gray-200">
+                                <p className="text-gray-500">You haven't created any posts yet.</p>
+                            </div>
+                        ) : (
+                            myPosts.map(post => {
+                                const postBids = receivedBids.filter(b => b.postId === post.id);
+                                return (
+                                    <div key={post.id} className="p-6 rounded-xl bg-white border border-gray-200">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="space-y-2">
+                                                <h3 className="font-semibold text-lg text-gray-900">
+                                                    {post.type === 'travel' ? `Travel to ${post.to}` : post.itemName} - {post.from} to {post.to}
+                                                </h3>
+                                                <p className="text-sm text-gray-500">
+                                                    Posted {post.createdAt?.seconds ? format(new Date(post.createdAt.seconds * 1000), 'yyyy-MM-dd') : 'Just now'}
+                                                </p>
                                             </div>
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                bid.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                            <span className={`px-3 py-1 rounded-lg text-sm font-medium ${post.status === 'open' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
                                                 }`}>
-                                                {bid.status}
+                                                {post.status === 'open' ? 'Open' : 'Closed'}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-gray-600 mb-3">{bid.message}</p>
+
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-center">
+                                                <p className="text-2xl font-bold text-primary">{postBids.length}</p>
+                                                <p className="text-xs text-gray-500">Offers</p>
+                                            </div>
+
+                                            <button
+                                                onClick={() => navigate(`/posts/${post.id}`)}
+                                                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                            >
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
+
+                {/* Received Bids Tab */}
+                {activeTab === 'received' && (
+                    <div className="space-y-4">
+                        {receivedBids.length === 0 ? (
+                            <div className="p-12 text-center rounded-xl bg-white border border-gray-200">
+                                <p className="text-gray-500">No bids received yet.</p>
+                            </div>
+                        ) : (
+                            receivedBids.map(bid => (
+                                <div key={bid.id} className="p-6 rounded-xl bg-white border border-gray-200">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="space-y-1">
+                                            <h3 className="font-semibold text-gray-900">{bid.postTitle || 'Post'}</h3>
+                                            <p className="text-sm text-gray-500">From {bid.bidderName}</p>
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-lg text-sm font-medium ${bid.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
+                                            bid.status === 'accepted' ? 'bg-green-100 text-green-600' :
+                                                'bg-red-100 text-red-600'
+                                            }`}>
+                                            {bid.status === 'pending' ? 'Pending' : bid.status === 'accepted' ? 'Accepted' : 'Rejected'}
+                                        </span>
+                                    </div>
+
+                                    {bid.message && (
+                                        <p className="text-gray-700 mb-4">{bid.message}</p>
+                                    )}
+
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xl font-bold text-primary">₹{bid.amount}</p>
                                         {bid.status === 'pending' && (
-                                            <div className="flex space-x-2">
+                                            <div className="flex gap-2">
                                                 <button
                                                     onClick={() => handleAcceptBid(bid)}
-                                                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                                                    className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm"
                                                 >
                                                     Accept
                                                 </button>
                                                 <button
                                                     onClick={() => handleRejectBid(bid)}
-                                                    className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                                                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
                                                 >
                                                     Reject
                                                 </button>
                                             </div>
                                         )}
                                         {bid.status === 'accepted' && (
-                                            <div className="mt-2">
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedBidForReview(bid);
-                                                        setIsReviewModalOpen(true);
-                                                    }}
-                                                    className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700"
-                                                >
-                                                    Review User
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedBidForReview(bid);
+                                                    setIsReviewModalOpen(true);
+                                                }}
+                                                className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                                            >
+                                                Review User
+                                            </button>
                                         )}
                                     </div>
-                                ))
-                            )}
-                        </div>
-                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
 
-                    {activeTab === 'bids' && (
-                        <div className="space-y-4">
-                            {myBids.length === 0 ? (
-                                <p className="text-center text-gray-500 py-10">You haven't placed any bids yet.</p>
-                            ) : (
-                                myBids.map(bid => (
-                                    <div key={bid.id} className="border border-gray-200 rounded-lg p-4 flex justify-between items-center">
-                                        <div>
-                                            <p className="text-sm text-gray-500">You offered <span className="font-bold text-gray-900">₹{bid.amount}</span></p>
-                                            <p className="text-xs text-gray-400">
-                                                {bid.createdAt?.seconds ? format(new Date(bid.createdAt.seconds * 1000), 'MMM d, yyyy') : 'Just now'}
+                {/* My Active Bids Tab */}
+                {activeTab === 'bids' && (
+                    <div className="space-y-4">
+                        {myBids.length === 0 ? (
+                            <div className="p-12 text-center rounded-xl bg-white border border-gray-200">
+                                <p className="text-gray-500">You haven't placed any bids yet.</p>
+                            </div>
+                        ) : (
+                            myBids.map(bid => (
+                                <div key={bid.id} className="p-6 rounded-xl bg-white border border-gray-200">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="space-y-1">
+                                            <h3 className="font-semibold text-gray-900">{bid.postTitle || 'Post'}</h3>
+                                            <p className="text-sm text-gray-500">
+                                                Posted by {bid.postOwnerName || 'User'} • {bid.createdAt?.seconds ? format(new Date(bid.createdAt.seconds * 1000), 'yyyy-MM-dd') : 'Just now'}
                                             </p>
                                         </div>
-                                        <span className={`px-2 py-1 rounded text-xs font-medium ${bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                            bid.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                        <span className={`px-3 py-1 rounded-lg text-sm font-medium ${bid.status === 'accepted' ? 'bg-green-100 text-green-600' :
+                                            bid.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
+                                                'bg-red-100 text-red-600'
                                             }`}>
-                                            {bid.status}
+                                            {bid.status === 'accepted' ? 'Accepted' : bid.status === 'pending' ? 'Pending' : 'Rejected'}
                                         </span>
                                     </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-                </div>
-                {selectedBidForReview && (
-                    <ReviewModal
-                        bid={selectedBidForReview}
-                        isOpen={isReviewModalOpen}
-                        onClose={() => setIsReviewModalOpen(false)}
-                    />
+
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xl font-bold text-primary">₹{bid.amount}</p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => navigate(`/posts/${bid.postId}`)}
+                                                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                            >
+                                                View Post
+                                            </button>
+                                            {bid.status === 'accepted' && (
+                                                <button
+                                                    onClick={() => navigate(`/messages?userId=${bid.postOwnerId}`)}
+                                                    className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm flex items-center gap-2"
+                                                >
+                                                    <MessageSquare className="h-4 w-4" />
+                                                    Start Chat
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 )}
             </div>
+
+            {selectedBidForReview && (
+                <ReviewModal
+                    bid={selectedBidForReview}
+                    isOpen={isReviewModalOpen}
+                    onClose={() => setIsReviewModalOpen(false)}
+                />
+            )}
         </div>
     );
 }

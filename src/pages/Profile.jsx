@@ -1,68 +1,99 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { User, Mail, Star } from 'lucide-react';
+import { Star, Edit2, MapPin, Briefcase, BookOpen, MessageSquare, Award, Mail } from 'lucide-react';
 import ReviewCard from '../components/ReviewCard';
 import { uploadImage } from '../utils/uploadImage';
 
 export default function Profile() {
+    const { userId } = useParams(); // Get userId from URL if viewing someone else's profile
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userProfile, setUserProfile] = useState(null);
-    const [editOpen, setEditOpen] = useState(false);
+    const [profileUser, setProfileUser] = useState(null); // The user whose profile we're viewing
+    const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({ profession: '', education: '', hometown: '', bio: '' });
     const [uploading, setUploading] = useState(false);
+    const [completedDeliveries, setCompletedDeliveries] = useState(0);
+
+    // Determine whose profile we're viewing
+    const targetUserId = userId || user?.uid;
+    const isOwnProfile = !userId || userId === user?.uid;
 
     useEffect(() => {
-        if (!user) {
+        if (!targetUserId) {
             setLoading(false);
             return;
         }
 
-        let unsubscribeFn = null;
+        // Fetch the profile user's data
+        const fetchProfileUser = async () => {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', targetUserId));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    setProfileUser({
+                        uid: targetUserId,
+                        displayName: userData.displayName || 'User',
+                        email: userData.email || '',
+                        photoURL: userData.photoURL || null,
+                        ...userData
+                    });
+                    setUserProfile(userData);
+                    setEditForm({
+                        profession: userData.profession || '',
+                        education: userData.education || '',
+                        hometown: userData.hometown || '',
+                        bio: userData.bio || ''
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching profile user:', error);
+            }
+        };
 
-        // Fetch reviews where current user is the target (reviews received)
+        fetchProfileUser();
+
+        // Fetch reviews for this user
+        let unsubscribeFn = null;
         const q = query(
             collection(db, 'reviews'),
-            where('targetUserId', '==', user.uid),
+            where('targetUserId', '==', targetUserId),
             orderBy('createdAt', 'desc')
         );
-        
+
         unsubscribeFn = onSnapshot(
             q,
             (snapshot) => {
-                const reviewsData = snapshot.docs.map(doc => ({ 
-                    id: doc.id, 
-                    ...doc.data() 
+                const reviewsData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
                 }));
-                console.log('Fetched reviews for user:', user.uid, reviewsData);
                 setReviews(reviewsData);
                 setLoading(false);
             },
             (error) => {
                 console.error('Error fetching reviews:', error);
-                // If orderBy fails (missing index), try without it
                 if (error.code === 'failed-precondition' || error.code === 'unavailable') {
-                    console.log('Retrying query without orderBy due to missing index...');
                     const qWithoutOrder = query(
                         collection(db, 'reviews'),
-                        where('targetUserId', '==', user.uid)
+                        where('targetUserId', '==', targetUserId)
                     );
                     unsubscribeFn = onSnapshot(
                         qWithoutOrder,
                         (snapshot) => {
-                            const reviewsData = snapshot.docs.map(doc => ({ 
-                                id: doc.id, 
-                                ...doc.data() 
+                            const reviewsData = snapshot.docs.map(doc => ({
+                                id: doc.id,
+                                ...doc.data()
                             })).sort((a, b) => {
-                                // Sort client-side by createdAt
                                 const aTime = a.createdAt?.seconds || 0;
                                 const bTime = b.createdAt?.seconds || 0;
                                 return bTime - aTime;
                             });
-                            console.log('Fetched reviews (without orderBy):', reviewsData);
                             setReviews(reviewsData);
                             setLoading(false);
                         },
@@ -76,162 +107,321 @@ export default function Profile() {
                 }
             }
         );
-        
+
+        // Fetch completed deliveries count
+        const bidsQuery = query(
+            collection(db, 'bids'),
+            where('bidderId', '==', targetUserId),
+            where('status', '==', 'accepted')
+        );
+        onSnapshot(bidsQuery, (snapshot) => {
+            setCompletedDeliveries(snapshot.size);
+        });
+
         return () => {
             if (unsubscribeFn) unsubscribeFn();
         };
-    }, [user]);
-
-    useEffect(() => {
-        if (user) {
-            const ref = doc(db, 'users', user.uid);
-            getDoc(ref).then(snapshot => {
-                if (snapshot.exists()) {
-                    setUserProfile({ ...snapshot.data() });
-                    setEditForm({
-                        profession: snapshot.data().profession || '',
-                        education: snapshot.data().education || '',
-                        hometown: snapshot.data().hometown || '',
-                        bio: snapshot.data().bio || ''
-                    });
-                }
-            });
-        }
-    }, [user]);
+    }, [targetUserId]);
 
     const handleEditSave = async () => {
-        if (!user) return;
+        if (!user || !isOwnProfile) return;
         const ref = doc(db, 'users', user.uid);
         await updateDoc(ref, editForm);
         setUserProfile((prev) => ({ ...prev, ...editForm }));
-        setEditOpen(false);
+        setIsEditing(false);
     };
 
-    // NEW: handle profile picture upload
-    async function handleProfilePicChange(e) {
+    const handleProfilePicChange = async (e) => {
+        if (!isOwnProfile) return;
         const file = e.target.files?.[0];
         if (!file) return;
         setUploading(true);
         try {
             const url = await uploadImage(file, 'profile-pictures');
-            // Update both Firebase Auth and Firestore user
             const userRef = doc(db, 'users', user.uid);
             await updateDoc(userRef, { photoURL: url });
             setUserProfile((prev) => ({ ...prev, photoURL: url }));
-            // Update Auth as well for immediate context update (if wanted)
-            if (user.providerData?.length) user.photoURL = url;
+            setProfileUser((prev) => ({ ...prev, photoURL: url }));
         } catch (err) {
             alert('Failed to upload profile picture');
         } finally {
             setUploading(false);
         }
+    };
+
+    const handleInputChange = (e, field) => {
+        setEditForm({
+            ...editForm,
+            [field]: e.target.value
+        });
+    };
+
+    // Calculate average rating
+    const averageRating = reviews.length > 0
+        ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
+        : 0;
+
+    if (!profileUser) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
     }
 
-    if (!user) return null;
-
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Profile Card */}
-                <div className="md:col-span-1">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-24">
-                        <div className="h-24 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-                        <div className="px-6 pb-6">
-                            <div className="relative flex justify-center -mt-12 mb-4">
-                                <div className="relative group cursor-pointer">
-                                    {userProfile?.photoURL ? (
-                                        <img src={userProfile.photoURL} alt={user.displayName} className="w-28 h-28 rounded-full border-4 border-white object-cover shadow-lg transition-transform group-hover:scale-105" />
-                                    ) : (
-                                        <div className="w-28 h-28 rounded-full border-4 border-white bg-indigo-100 flex items-center justify-center text-primary text-4xl font-bold shadow-lg">
-                                            {user.displayName?.[0]?.toUpperCase() || 'U'}
-                                        </div>
-                                    )}
-                                    <label className="absolute bottom-2 right-2 bg-indigo-600 rounded-full p-1 cursor-pointer shadow group-hover:bg-indigo-500 transition-colors" title="Change Picture">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l3-3 8 8M13 7h0" /></svg>
-                                        <input type="file" accept="image/*" className="hidden" onChange={handleProfilePicChange} disabled={uploading}/>
+        <div className="max-w-6xl mx-auto">
+            {/* Profile Header */}
+            <div className="mb-8 rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+                <div className="px-6 py-12">
+                    <div className="flex items-start justify-between gap-6">
+                        <div className="flex items-start gap-6">
+                            <div className="relative">
+                                {profileUser.photoURL ? (
+                                    <img
+                                        src={profileUser.photoURL}
+                                        alt={profileUser.displayName}
+                                        className="h-24 w-24 rounded-full border-4 border-white shadow-lg object-cover"
+                                    />
+                                ) : (
+                                    <div className="h-24 w-24 rounded-full border-4 border-white bg-indigo-100 flex items-center justify-center text-primary text-3xl font-bold shadow-lg">
+                                        {profileUser.displayName?.[0]?.toUpperCase() || 'U'}
+                                    </div>
+                                )}
+                                {isOwnProfile && isEditing && (
+                                    <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
+                                        <Edit2 className="h-6 w-6 text-white" />
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleProfilePicChange} disabled={uploading} />
                                     </label>
-                                    {uploading && <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center text-primary font-bold rounded-full">Uploading...</div>}
+                                )}
+                            </div>
+
+                            <div className="space-y-3">
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={editForm.displayName || profileUser.displayName}
+                                        onChange={(e) => handleInputChange(e, 'displayName')}
+                                        className="text-4xl font-bold bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-900"
+                                    />
+                                ) : (
+                                    <h1 className="text-4xl font-bold text-gray-900">{profileUser.displayName}</h1>
+                                )}
+
+                                <div className="flex items-center gap-4 flex-wrap">
+                                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white border border-gray-200">
+                                        <Star className="h-4 w-4 fill-primary text-primary" />
+                                        <span className="font-semibold text-gray-900">{averageRating}</span>
+                                        <span className="text-sm text-gray-500">({reviews.length} reviews)</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white border border-gray-200">
+                                        <Award className="h-4 w-4 text-purple-600" />
+                                        <span className="text-sm text-gray-900">{completedDeliveries} Deliveries</span>
+                                    </div>
+
+                                    <div className="text-sm text-gray-600">
+                                        Joined {userProfile?.joinDate || new Date().getFullYear()}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="text-center mb-6">
-                                <h1 className="text-xl font-bold text-gray-900">{user.displayName}</h1>
-                                <p className="text-sm text-gray-500">Member since {new Date().getFullYear()}</p>
-                            </div>
-                            <div className="border-t border-gray-200 pt-4 space-y-3">
-                                <div className="flex items-center text-gray-600 text-sm">
-                                    <Mail className="w-4 h-4 mr-3 text-gray-400" />
-                                    <span className="truncate">{user.email}</span>
-                                </div>
-                                <div className="flex items-center text-gray-600 text-sm">
-                                    <User className="w-4 h-4 mr-3 text-gray-400" />
-                                    <span>Verified User</span>
-                                </div>
-                            </div>
-                            {/* Extra Fields Display */}
-                            <div className="mt-6 text-sm text-gray-700 space-y-1">
-                                {userProfile?.profession && <div><strong>Profession:</strong> {userProfile.profession}</div>}
-                                {userProfile?.education && <div><strong>Education:</strong> {userProfile.education}</div>}
-                                {userProfile?.hometown && <div><strong>Hometown:</strong> {userProfile.hometown}</div>}
-                                {userProfile?.bio && <div><strong>Bio:</strong> {userProfile.bio}</div>}
-                            </div>
-                            <div className="mt-6">
-                                <button className="w-full bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors" onClick={() => setEditOpen(true)}>
-                                    Edit Profile
+                        </div>
+
+                        <div className="flex gap-2">
+                            {isOwnProfile ? (
+                                isEditing ? (
+                                    <>
+                                        <button
+                                            onClick={handleEditSave}
+                                            className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                                        >
+                                            Save Changes
+                                        </button>
+                                        <button
+                                            onClick={() => setIsEditing(false)}
+                                            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={() => setIsEditing(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        <Edit2 className="h-4 w-4" />
+                                        Edit Profile
+                                    </button>
+                                )
+                            ) : (
+                                <button
+                                    onClick={() => navigate(`/messages?userId=${targetUserId}`)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                                >
+                                    <MessageSquare className="h-4 w-4" />
+                                    Message
                                 </button>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
-                {/* Reviews Section */}
-                <div className="md:col-span-2">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div className="mb-6">
-                            <h2 className="text-lg font-bold text-gray-900">User Reviews</h2>
+            </div>
+
+            {/* Content */}
+            <div className="grid gap-8 lg:grid-cols-3">
+                {/* Main Content */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* About Section */}
+                    <div className="space-y-4">
+                        <h2 className="text-2xl font-bold text-gray-900">About</h2>
+                        {isEditing ? (
+                            <textarea
+                                value={editForm.bio}
+                                onChange={(e) => handleInputChange(e, 'bio')}
+                                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors h-24 resize-none"
+                                placeholder="Tell us about yourself..."
+                            />
+                        ) : (
+                            <p className="text-gray-600 text-lg">
+                                {userProfile?.bio || 'No bio added yet.'}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Details Section */}
+                    <div className="space-y-4">
+                        <h2 className="text-2xl font-bold text-gray-900">Details</h2>
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                            {/* Profession */}
+                            <div className="p-4 rounded-lg bg-white border border-gray-200 space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Briefcase className="h-4 w-4" />
+                                    Profession
+                                </div>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={editForm.profession}
+                                        onChange={(e) => handleInputChange(e, 'profession')}
+                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 text-sm"
+                                        placeholder="Your profession"
+                                    />
+                                ) : (
+                                    <p className="font-semibold text-gray-900">{userProfile?.profession || 'Not specified'}</p>
+                                )}
+                            </div>
+
+                            {/* Education */}
+                            <div className="p-4 rounded-lg bg-white border border-gray-200 space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <BookOpen className="h-4 w-4" />
+                                    Education
+                                </div>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={editForm.education}
+                                        onChange={(e) => handleInputChange(e, 'education')}
+                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 text-sm"
+                                        placeholder="Your education"
+                                    />
+                                ) : (
+                                    <p className="font-semibold text-gray-900">{userProfile?.education || 'Not specified'}</p>
+                                )}
+                            </div>
+
+                            {/* Hometown */}
+                            <div className="p-4 rounded-lg bg-white border border-gray-200 space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <MapPin className="h-4 w-4" />
+                                    Hometown
+                                </div>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={editForm.hometown}
+                                        onChange={(e) => handleInputChange(e, 'hometown')}
+                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 text-sm"
+                                        placeholder="Your hometown"
+                                    />
+                                ) : (
+                                    <p className="font-semibold text-gray-900">{userProfile?.hometown || 'Not specified'}</p>
+                                )}
+                            </div>
+
+                            {/* Email */}
+                            <div className="p-4 rounded-lg bg-white border border-gray-200 space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Mail className="h-4 w-4" />
+                                    Email
+                                </div>
+                                <p className="font-semibold text-gray-900">{profileUser.email}</p>
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Reviews Section */}
+                    <div className="space-y-4">
+                        <h2 className="text-2xl font-bold text-gray-900">Reviews ({reviews.length})</h2>
+
                         {loading ? (
                             <div className="text-center py-10 text-gray-500">Loading reviews...</div>
                         ) : reviews.length === 0 ? (
-                            <div className="text-center py-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                            <div className="p-12 text-center rounded-xl bg-white border border-gray-200">
                                 <Star className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500">No reviews received yet.</p>
-                                <p className="text-sm text-gray-400 mt-1">Reviews appear here when others review you after completing transactions.</p>
-                                <p className="text-xs text-gray-400 mt-2">Note: Reviews you give to others appear on their profiles, not yours.</p>
+                                <p className="text-gray-500">No reviews yet</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {reviews.map(review => (
-                                    <ReviewCard key={review.id} review={review} />
+                                {reviews.map((review) => (
+                                    <div key={review.id} className="p-6 rounded-lg bg-white border border-gray-200 space-y-4">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-4">
+                                                {review.reviewerPhotoURL ? (
+                                                    <img
+                                                        src={review.reviewerPhotoURL}
+                                                        alt={review.reviewerName}
+                                                        className="h-10 w-10 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-semibold">
+                                                        {review.reviewerName?.[0]?.toUpperCase() || 'U'}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900">{review.reviewerName}</h3>
+                                                    <p className="text-xs text-gray-500">
+                                                        {review.createdAt?.seconds
+                                                            ? new Date(review.createdAt.seconds * 1000).toLocaleDateString()
+                                                            : 'Recently'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        className={`h-4 w-4 ${i < (review.rating || 0) ? 'fill-primary text-primary' : 'text-gray-300'
+                                                            }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <p className="text-gray-700">{review.comment}</p>
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </div>
                 </div>
-            </div>
-            {/* Modern UI edit modal tweaks */}
-            {editOpen && (
-                <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center p-2">
-                    <div className="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-md mx-auto relative">
-                        <button className="absolute top-3 right-4 text-xl" onClick={() => setEditOpen(false)}>&times;</button>
-                        <h2 className="text-2xl font-bold mb-4 text-center text-indigo-700">Edit Profile</h2>
-                        <label className="block text-sm mt-3 font-semibold text-gray-700">Profession
-                            <input className="mt-1 block w-full border-gray-200 rounded-lg p-2" value={editForm.profession} onChange={e => setEditForm(f => ({...f, profession: e.target.value}))} />
-                        </label>
-                        <label className="block text-sm mt-3 font-semibold text-gray-700">Education
-                            <input className="mt-1 block w-full border-gray-200 rounded-lg p-2" value={editForm.education} onChange={e => setEditForm(f => ({...f, education: e.target.value}))} />
-                        </label>
-                        <label className="block text-sm mt-3 font-semibold text-gray-700">Hometown
-                            <input className="mt-1 block w-full border-gray-200 rounded-lg p-2" value={editForm.hometown} onChange={e => setEditForm(f => ({...f, hometown: e.target.value}))} />
-                        </label>
-                        <label className="block text-sm mt-3 font-semibold text-gray-700">Bio
-                            <textarea className="mt-1 block w-full border-gray-200 rounded-lg p-2" rows={3} value={editForm.bio} onChange={e => setEditForm(f => ({...f, bio: e.target.value}))} />
-                        </label>
-                        <div className="flex items-center space-x-4 mt-7 justify-center">
-                            <button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-md px-5 py-2 font-semibold shadow" onClick={handleEditSave}>Save</button>
-                            <button className="bg-gray-200 hover:bg-gray-300 rounded-md px-5 py-2 font-medium" onClick={() => setEditOpen(false)}>Cancel</button>
-                        </div>
-                    </div>
+
+                {/* Sidebar - Empty for now, can add stats later */}
+                <div className="space-y-4">
+                    {/* Future: Add activity stats, badges, etc. */}
                 </div>
-            )}
+            </div>
         </div>
     );
 }

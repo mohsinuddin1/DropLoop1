@@ -41,7 +41,17 @@ export default function Posts() {
     }, []);
 
     const filteredPosts = posts.filter(post => {
-        const matchesFilter = filter === 'all' || post.type === filter;
+        // Filter logic:
+        // 'all' - show all posts
+        // 'sender' - show travel posts (travelers who can deliver for senders)
+        // 'traveler' - show item posts (items that travelers can deliver)
+        let matchesFilter = true;
+        if (filter === 'sender') {
+            matchesFilter = post.type === 'travel'; // Senders see travelers
+        } else if (filter === 'traveler') {
+            matchesFilter = post.type === 'item'; // Travelers see items to deliver
+        }
+
         const matchesSearch =
             post.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
             post.to.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,41 +72,64 @@ export default function Posts() {
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                <h1 className="text-3xl font-bold text-gray-900">Recent Posts</h1>
+            {/* Header */}
+            <div className="mb-12">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                    <div className="space-y-2">
+                        <h1 className="text-4xl font-bold text-gray-900">Browse Posts</h1>
+                        <p className="text-gray-600">Find items to deliver or travelers on your route</p>
+                    </div>
+                    <button
+                        onClick={() => navigate('/create-post')}
+                        className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create Post
+                    </button>
+                </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                {/* Search and Filter */}
+                <div className="grid gap-4 md:grid-cols-2">
                     <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
-                        </div>
+                        <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
                         <input
                             type="text"
-                            className="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border"
-                            placeholder="Search locations..."
+                            placeholder="Search by location or item..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-
-                    <div className="flex rounded-md shadow-sm">
+                    <div className="flex gap-2">
                         <button
                             onClick={() => setFilter('all')}
-                            className={`px-4 py-2 text-sm font-medium rounded-l-md border ${filter === 'all' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                            className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${filter === 'all'
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
                         >
-                            All
+                            <Filter className="h-4 w-4 inline mr-2" />
+                            All Posts
                         </button>
                         <button
-                            onClick={() => setFilter('travel')}
-                            className={`px-4 py-2 text-sm font-medium border-t border-b ${filter === 'travel' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                            onClick={() => setFilter('sender')}
+                            className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${filter === 'sender'
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
                         >
-                            Travellers
+                            For Senders
                         </button>
                         <button
-                            onClick={() => setFilter('item')}
-                            className={`px-4 py-2 text-sm font-medium rounded-r-md border ${filter === 'item' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                            onClick={() => setFilter('traveler')}
+                            className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors ${filter === 'traveler'
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
                         >
-                            Senders
+                            For Travelers
                         </button>
                     </div>
                 </div>

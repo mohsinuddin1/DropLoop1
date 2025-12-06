@@ -9,14 +9,15 @@ import { uploadImage } from '../utils/uploadImage';
 export default function CreatePost() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [postType, setPostType] = useState('travel'); // 'travel' or 'item'
+    const [postType, setPostType] = useState('item'); // 'travel' or 'item'
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     // Common fields
     const [from, setFrom] = useState('');
     const [to, setTo] = useState('');
-    const [date, setDate] = useState('');
+    const [departureDate, setDepartureDate] = useState('');
+    const [arrivalDate, setArrivalDate] = useState('');
 
     // Travel specific
     const [mode, setMode] = useState('flight'); // flight, train, bus, car
@@ -24,6 +25,7 @@ export default function CreatePost() {
     // Item specific
     const [itemName, setItemName] = useState('');
     const [itemWeight, setItemWeight] = useState('');
+    const [offerPrice, setOfferPrice] = useState('');
     const [description, setDescription] = useState('');
     const [imageFile, setImageFile] = useState(null);
 
@@ -37,7 +39,8 @@ export default function CreatePost() {
                 type: postType,
                 from,
                 to,
-                date, // Travel date or Delivery deadline
+                departureDate,
+                arrivalDate,
                 userId: user.uid,
                 userDisplayName: user.displayName,
                 userPhotoURL: user.photoURL,
@@ -47,9 +50,11 @@ export default function CreatePost() {
 
             if (postType === 'travel') {
                 postData.mode = mode;
+                if (offerPrice) postData.offerPrice = Number(offerPrice);
             } else {
                 postData.itemName = itemName;
                 postData.itemWeight = itemWeight;
+                if (offerPrice) postData.offerPrice = Number(offerPrice);
                 postData.description = description;
 
                 if (imageFile) {
@@ -68,89 +73,221 @@ export default function CreatePost() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Create a New Post</h1>
+        <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Create a Post</h1>
+                <p className="text-gray-600">Share what you're traveling with or sending</p>
+            </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                {/* Tabs */}
-                <div className="flex border-b border-gray-200">
-                    <button
-                        className={`flex-1 py-4 text-center font-medium text-sm flex items-center justify-center gap-2 ${postType === 'travel' ? 'bg-indigo-50 text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
-                        onClick={() => setPostType('travel')}
-                    >
-                        <Plane className="w-5 h-5" />
-                        I am Travelling
-                    </button>
-                    <button
-                        className={`flex-1 py-4 text-center font-medium text-sm flex items-center justify-center gap-2 ${postType === 'item' ? 'bg-indigo-50 text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
-                        onClick={() => setPostType('item')}
-                    >
-                        <Package className="w-5 h-5" />
-                        I Want to Send an Item
-                    </button>
-                </div>
+            {/* Tab Selection - Card Style */}
+            <div className="grid grid-cols-2 gap-4 mb-12">
+                <button
+                    onClick={() => setPostType('item')}
+                    className={`p-6 rounded-xl border-2 transition-all text-left space-y-3 ${postType === 'item'
+                        ? 'border-primary bg-indigo-50'
+                        : 'border-gray-200 hover:border-primary/50 bg-white'
+                        }`}
+                >
+                    <div className="flex items-center gap-3">
+                        <Package className={`h-6 w-6 ${postType === 'item' ? 'text-primary' : 'text-gray-400'}`} />
+                        <h3 className="font-semibold text-gray-900">I Want to Send an Item</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">Post items you want to send with a traveler</p>
+                </button>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                    {error && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
+                <button
+                    onClick={() => setPostType('travel')}
+                    className={`p-6 rounded-xl border-2 transition-all text-left space-y-3 ${postType === 'travel'
+                        ? 'border-primary bg-indigo-50'
+                        : 'border-gray-200 hover:border-primary/50 bg-white'
+                        }`}
+                >
+                    <div className="flex items-center gap-3">
+                        <Plane className={`h-6 w-6 ${postType === 'travel' ? 'text-primary' : 'text-gray-400'}`} />
+                        <h3 className="font-semibold text-gray-900">I am Travelling</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">Share your travel route and earn money carrying items</p>
+                </button>
+            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">From Location</label>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-8">
+                {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-200">{error}</div>}
+
+                {/* Route Section */}
+                <div className="space-y-4">
+                    <h2 className="text-xl font-semibold text-gray-900">Route Details</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">From</label>
                             <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <MapPin className="h-5 w-5 text-gray-400" />
-                                </div>
+                                <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
                                 <input
                                     type="text"
                                     required
-                                    className="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border"
-                                    placeholder="City, Country"
+                                    placeholder="Departure city"
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
                                     value={from}
                                     onChange={(e) => setFrom(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">To Location</label>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">To</label>
                             <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <MapPin className="h-5 w-5 text-gray-400" />
-                                </div>
+                                <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
                                 <input
                                     type="text"
                                     required
-                                    className="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border"
-                                    placeholder="City, Country"
+                                    placeholder="Destination city"
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
                                     value={to}
                                     onChange={(e) => setTo(e.target.value)}
                                 />
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {postType === 'travel' ? 'Date of Travel' : 'Latest Delivery Date'}
-                        </label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Calendar className="h-5 w-5 text-gray-400" />
+                {/* Date Section */}
+                <div className="space-y-4">
+                    <h2 className="text-xl font-semibold text-gray-900">Schedule</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">
+                                {postType === 'travel' ? 'Departure Date' : 'Pickup Date'}
+                            </label>
+                            <div className="relative">
+                                <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                                    value={departureDate}
+                                    onChange={(e) => setDepartureDate(e.target.value)}
+                                />
                             </div>
-                            <input
-                                type="date"
-                                required
-                                className="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">
+                                {postType === 'travel' ? 'Arrival Date' : 'Delivery Date'}
+                            </label>
+                            <div className="relative">
+                                <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                                    value={arrivalDate}
+                                    onChange={(e) => setArrivalDate(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    {postType === 'travel' && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Mode of Transport</label>
+                {/* Item/Travel Specific Fields */}
+                {postType === 'item' ? (
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-semibold text-gray-900">Item Details</h2>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Item Name</label>
+                            <input
+                                type="text"
+                                required
+                                placeholder="e.g., Electronics, Documents, Clothes"
+                                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                                value={itemName}
+                                onChange={(e) => setItemName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Weight</label>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    required
+                                    placeholder="e.g., 2kg"
+                                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                                    value={itemWeight}
+                                    onChange={(e) => setItemWeight(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Offer Price (Optional)</label>
+                                <input
+                                    type="number"
+                                    placeholder="e.g., ₹500"
+                                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                                    value={offerPrice}
+                                    onChange={(e) => setOfferPrice(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Description</label>
+                            <textarea
+                                placeholder="Describe the item, any fragile/special instructions"
+                                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors h-24 resize-none"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Image Upload */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Item Photo (Optional)</label>
+                            <div className="relative">
+                                {!imageFile ? (
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
+                                            <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                if (e.target.files[0]) setImageFile(e.target.files[0]);
+                                            }}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                ) : (
+                                    <div className="relative">
+                                        <img
+                                            src={URL.createObjectURL(imageFile)}
+                                            alt="Item"
+                                            className="w-full h-32 object-cover rounded-lg"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setImageFile(null)}
+                                            className="absolute -top-2 -right-2 p-1.5 bg-red-500 rounded-full hover:bg-red-600 transition-colors"
+                                        >
+                                            <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-semibold text-gray-900">Travel Details</h2>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Transport Mode</label>
                             <select
-                                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border px-3"
+                                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
                                 value={mode}
                                 onChange={(e) => setMode(e.target.value)}
                             >
@@ -160,114 +297,54 @@ export default function CreatePost() {
                                 <option value="car">Car</option>
                             </select>
                         </div>
-                    )}
 
-                    {postType === 'item' && (
-                        <>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border px-3"
-                                    placeholder="e.g., Laptop, Documents, Clothes"
-                                    value={itemName}
-                                    onChange={(e) => setItemName(e.target.value)}
-                                />
-                            </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Capacity</label>
+                            <input
+                                type="text"
+                                placeholder="e.g., 5kg, 2 packages"
+                                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                            />
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Approx Weight (kg)</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Weight className="h-5 w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        required
-                                        className="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border"
-                                        placeholder="2.5"
-                                        value={itemWeight}
-                                        onChange={(e) => setItemWeight(e.target.value)}
-                                    />
-                                </div>
-                            </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Offer Price (Optional)</label>
+                            <input
+                                type="number"
+                                placeholder="e.g., ₹500"
+                                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                                value={offerPrice}
+                                onChange={(e) => setOfferPrice(e.target.value)}
+                            />
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <textarea
-                                    rows={3}
-                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border px-3"
-                                    placeholder="Any specific details about the item..."
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Item Image (Optional)</label>
-                                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                                    <div className="space-y-1 text-center">
-                                        {imageFile ? (
-                                            <div className="relative">
-                                                <img
-                                                    src={URL.createObjectURL(imageFile)}
-                                                    alt="Preview"
-                                                    className="mx-auto h-48 object-cover rounded-md"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setImageFile(null)}
-                                                    className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                                                <div className="flex text-sm text-gray-600">
-                                                    <label
-                                                        htmlFor="file-upload"
-                                                        className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
-                                                    >
-                                                        <span>Upload a file</span>
-                                                        <input
-                                                            id="file-upload"
-                                                            name="file-upload"
-                                                            type="file"
-                                                            className="sr-only"
-                                                            accept="image/*"
-                                                            onChange={(e) => {
-                                                                if (e.target.files[0]) setImageFile(e.target.files[0]);
-                                                            }}
-                                                        />
-                                                    </label>
-                                                    <p className="pl-1">or drag and drop</p>
-                                                </div>
-                                                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    <div className="pt-4">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
-                        >
-                            {loading ? 'Creating...' : 'Create Post'}
-                        </button>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Additional Details</label>
+                            <textarea
+                                placeholder="Any special notes, restrictions, or additional information"
+                                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors h-24 resize-none"
+                            />
+                        </div>
                     </div>
-                </form>
-            </div>
+                )}
+
+                {/* Submit */}
+                <div className="flex gap-4 pt-8 border-t border-gray-200">
+                    <button
+                        type="button"
+                        className="flex-1 px-6 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        Save as Draft
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? 'Publishing...' : 'Publish Post'}
+                    </button>
+                </div>
+            </form>
         </div>
     );
 }

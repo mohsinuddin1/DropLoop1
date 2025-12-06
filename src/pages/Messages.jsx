@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
-import { Send, User, Image as ImageIcon, Loader, ArrowLeft } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, updateDoc, getDoc, getDocs } from 'firebase/firestore';
+import { Send, Search, Plus, Paperclip, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { uploadImage } from '../utils/uploadImage';
 
 export default function Messages() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const navigate = useNavigate();
     const { addNotification } = useNotifications();
@@ -18,10 +19,13 @@ export default function Messages() {
     const [newMessage, setNewMessage] = useState('');
     const [imageFile, setImageFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
-    const [userDetails, setUserDetails] = useState({}); // New: Cache user data (avatar, name)
+    const [userDetails, setUserDetails] = useState({});
     const [processedMessageIds, setProcessedMessageIds] = useState(new Set());
+    const [mobileView, setMobileView] = useState('list'); // 'list' or 'chat'
+    const listenerStartTime = useRef(Date.now()); // Track when listener starts to avoid notifying for old messages
 
     // Fetch Chats
     useEffect(() => {
@@ -30,7 +34,6 @@ export default function Messages() {
         const unsubscribe = onSnapshot(q,
             (snapshot) => {
                 const chatsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log('Fetched chats:', chatsData);
                 setChats(chatsData);
             },
             (error) => {
@@ -50,37 +53,40 @@ export default function Messages() {
         const unsubscribe = onSnapshot(q,
             (snapshot) => {
                 const messagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log('Fetched messages for chat:', selectedChat.id, messagesData);
-                
+
                 // Check for new messages from other users (notifications)
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === 'added') {
                         const msg = change.doc.data();
                         const msgId = change.doc.id;
-                        
-                        // Only notify if message is from someone else and not already processed
+
                         if (msg.senderId !== user.uid && !processedMessageIds.has(msgId)) {
                             setProcessedMessageIds(prev => new Set([...prev, msgId]));
-                            
-                            // Get sender name
-                            const senderName = userDetails[msg.senderId]?.displayName || 
-                                             selectedChat.participantNames?.[msg.senderId] || 
-                                             'Someone';
-                            
-                            addNotification({
-                                id: `msg-${msgId}`,
-                                type: 'message',
-                                title: `New message from ${senderName}`,
-                                message: msg.text || '📷 Image',
-                                chatId: selectedChat.id,
-                                userId: msg.senderId,
-                                timestamp: new Date(),
-                                read: false
-                            });
+
+                            // Only send notification if message was created after listener started
+                            // This prevents notifications for old messages in chat history
+                            const messageTimestamp = msg.createdAt?.toMillis();
+
+                            if (messageTimestamp && messageTimestamp > listenerStartTime.current) {
+                                const senderName = userDetails[msg.senderId]?.displayName ||
+                                    selectedChat.participantNames?.[msg.senderId] ||
+                                    'Someone';
+
+                                addNotification({
+                                    id: `msg-${msgId}`,
+                                    type: 'message',
+                                    title: `New message from ${senderName}`,
+                                    message: msg.text || '📷 Image',
+                                    chatId: selectedChat.id,
+                                    userId: msg.senderId,
+                                    timestamp: new Date(),
+                                    read: false
+                                });
+                            }
                         }
                     }
                 });
-                
+
                 setMessages(messagesData);
             },
             (error) => {
@@ -95,7 +101,7 @@ export default function Messages() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Helper: fetch user doc from Firestore if not in cache
+    // Fetch user details
     const fetchUserDetails = async (uid) => {
         if (userDetails[uid]) return userDetails[uid];
         try {
@@ -105,11 +111,11 @@ export default function Messages() {
                 setUserDetails(prev => ({ ...prev, [uid]: data }));
                 return data;
             }
-        } catch(e) {}
+        } catch (e) { }
         return {};
     };
 
-    // WhatsApp-style: add avatars to all chatlist on load
+    // Fetch all user details for chat list
     useEffect(() => {
         if (!user || !chats.length) return;
         const fetchAll = async () => {
@@ -120,6 +126,70 @@ export default function Messages() {
         };
         fetchAll();
     }, [chats, user]);
+
+    // Handle opening a specific user's DM from URL parameter
+    useEffect(() => {
+        const userId = searchParams.get('userId');
+        if (!userId || !user || !chats.length) return;
+
+        const findOrCreateChat = async () => {
+            try {
+                // Check if chat already exists
+                const existingChat = chats.find(chat =>
+                    chat.participants.includes(userId) && chat.participants.includes(user.uid)
+                );
+
+                if (existingChat) {
+                    // Chat exists, select it
+                    setSelectedChat(existingChat);
+                    setMobileView('chat');
+                    // Clear the URL parameter
+                    setSearchParams({});
+                } else {
+                    // Chat doesn't exist, create it
+                    const otherUserDoc = await getDoc(doc(db, 'users', userId));
+                    if (!otherUserDoc.exists()) {
+                        console.error('User not found');
+                        setSearchParams({});
+                        return;
+                    }
+
+                    const otherUserData = otherUserDoc.data();
+
+                    // Create new chat
+                    const newChatRef = await addDoc(collection(db, 'chats'), {
+                        participants: [user.uid, userId],
+                        participantNames: {
+                            [user.uid]: user.displayName || 'User',
+                            [userId]: otherUserData.displayName || 'User'
+                        },
+                        lastMessage: '',
+                        updatedAt: serverTimestamp(),
+                        createdAt: serverTimestamp()
+                    });
+
+                    // Fetch the newly created chat
+                    const newChatDoc = await getDoc(newChatRef);
+                    const newChat = { id: newChatDoc.id, ...newChatDoc.data() };
+
+                    // Select the new chat
+                    setSelectedChat(newChat);
+                    setMobileView('chat');
+
+                    // Fetch user details
+                    await fetchUserDetails(userId);
+
+                    // Clear the URL parameter
+                    setSearchParams({});
+                }
+            } catch (error) {
+                console.error('Error finding/creating chat:', error);
+                setSearchParams({});
+            }
+        };
+
+        findOrCreateChat();
+    }, [searchParams, user, chats]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -161,44 +231,108 @@ export default function Messages() {
 
     const getOtherParticipant = (chat) => {
         const otherId = chat.participants.find(id => id !== user.uid);
-        // Returns: { uid, displayName, photoURL }
         return { uid: otherId, ...(userDetails[otherId] || {}), nameFallback: chat.participantNames?.[otherId] };
     };
 
+    const handleChatClick = (chat) => {
+        setSelectedChat(chat);
+        setMobileView('chat');
+    };
+
+    // Filter chats based on search
+    const filteredChats = chats.filter(chat => {
+        const participant = getOtherParticipant(chat);
+        const name = participant.displayName || participant.nameFallback || '';
+        return name.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    const formatTimestamp = (timestamp) => {
+        if (!timestamp?.seconds) return '';
+        const date = new Date(timestamp.seconds * 1000);
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 60) return `${minutes} min`;
+        if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''}`;
+        if (days === 1) return 'Yesterday';
+        return format(date, 'MMM d');
+    };
+
     return (
-        <div className="flex h-[calc(100vh-64px)] bg-white overflow-hidden">
-            {/* WhatsApp-style Chat List */}
-            <div className={`w-full md:w-1/3 border-r border-gray-200 flex-col ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
-                <div className="p-4 border-b border-gray-200 bg-gray-50">
-                    <h2 className="font-semibold text-gray-700">Messages</h2>
+        <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
+            {/* Chat List */}
+            <div className={`${mobileView === 'list' ? 'flex' : 'hidden'
+                } md:flex w-full md:w-80 flex-col border-r border-gray-200 bg-white`}>
+                {/* Header */}
+                <div className="p-4 border-b border-gray-200 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Plus className="h-5 w-5 text-gray-600" />
+                        </button>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
+                        <input
+                            type="text"
+                            placeholder="Search conversations..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
+                        />
+                    </div>
                 </div>
+
+                {/* Chat List */}
                 <div className="flex-1 overflow-y-auto">
-                    {chats.length === 0 ? (
-                        <p className="text-center text-gray-500 py-10">No conversations yet.</p>
+                    {filteredChats.length === 0 ? (
+                        <p className="text-center text-gray-500 py-10">
+                            {searchTerm ? 'No conversations found' : 'No conversations yet'}
+                        </p>
                     ) : (
-                        chats.map(chat => {
+                        filteredChats.map(chat => {
                             const participant = getOtherParticipant(chat);
+                            const isSelected = selectedChat?.id === chat.id;
                             return (
-                                <div
+                                <button
                                     key={chat.id}
-                                    onClick={() => setSelectedChat(chat)}
-                                    className={`flex items-center space-x-3 p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${selectedChat?.id === chat.id ? 'bg-indigo-50' : ''}`}
+                                    onClick={() => handleChatClick(chat)}
+                                    className={`w-full p-4 border-b border-gray-100 text-left hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50 border-l-2 border-l-primary' : ''
+                                        }`}
                                 >
-                                    {participant.photoURL ? (
-                                        <img className="w-12 h-12 rounded-full object-cover" src={participant.photoURL} alt={participant.displayName || participant.nameFallback || 'User'} />
-                                    ) : (
-                                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-primary text-xl font-bold">
-                                            {participant.displayName ? participant.displayName[0] : participant.nameFallback ? participant.nameFallback[0] : 'U'}
+                                    <div className="flex items-start gap-3">
+                                        <div className="relative flex-shrink-0">
+                                            {participant.photoURL ? (
+                                                <img
+                                                    className="w-12 h-12 rounded-full object-cover"
+                                                    src={participant.photoURL}
+                                                    alt={participant.displayName || participant.nameFallback || 'User'}
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-primary text-lg font-bold">
+                                                    {(participant.displayName || participant.nameFallback || 'U')[0].toUpperCase()}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-base font-semibold text-gray-900 truncate">{participant.displayName || participant.nameFallback || 'User'}</p>
-                                            <span className="text-xs text-gray-400 ml-2">{chat.updatedAt?.seconds ? format(new Date(chat.updatedAt.seconds * 1000), 'HH:mm') : ''}</span>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                                <h3 className="font-semibold text-gray-900 truncate">
+                                                    {participant.displayName || participant.nameFallback || 'User'}
+                                                </h3>
+                                                <span className="text-xs text-gray-400 flex-shrink-0">
+                                                    {formatTimestamp(chat.updatedAt)}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-500 truncate">{chat.lastMessage}</p>
                                         </div>
-                                        <p className="text-xs text-gray-500 truncate mt-0.5">{chat.lastMessage}</p>
                                     </div>
-                                </div>
+                                </button>
                             );
                         })
                     )}
@@ -206,47 +340,74 @@ export default function Messages() {
             </div>
 
             {/* Chat Area */}
-            <div className={`flex-1 flex-col ${selectedChat ? 'flex' : 'hidden md:flex'}`}>
+            <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} md:flex flex-1 flex-col bg-white`}>
                 {selectedChat ? (
                     <>
-                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-                            <div className="flex items-center">
+                        {/* Chat Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+                            <div className="flex items-center gap-3">
                                 <button
-                                    onClick={() => setSelectedChat(null)}
-                                    className="mr-3 md:hidden text-gray-500 hover:text-gray-700"
+                                    onClick={() => setMobileView('list')}
+                                    className="md:hidden p-1 hover:bg-gray-100 rounded transition-colors"
                                 >
-                                    <ArrowLeft className="w-6 h-6" />
+                                    <ArrowLeft className="w-6 h-6 text-gray-600" />
                                 </button>
-                                <h3 className="font-medium text-gray-900">{getOtherParticipant(selectedChat).displayName || getOtherParticipant(selectedChat).nameFallback || 'User'}</h3>
+                                {(() => {
+                                    const participant = getOtherParticipant(selectedChat);
+                                    return (
+                                        <>
+                                            {participant.photoURL ? (
+                                                <img
+                                                    src={participant.photoURL}
+                                                    alt={participant.displayName || participant.nameFallback}
+                                                    className="h-10 w-10 rounded-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center text-primary font-bold">
+                                                    {(participant.displayName || participant.nameFallback || 'U')[0].toUpperCase()}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <h2 className="font-semibold text-gray-900">
+                                                    {participant.displayName || participant.nameFallback || 'User'}
+                                                </h2>
+                                                <p className="text-xs text-gray-500">Active now</p>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
-                            {/* Profile info is already visible - name and avatar shown in chat list */}
                         </div>
 
+                        {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
                             {messages.map(msg => (
                                 <div
                                     key={msg.id}
                                     className={`flex ${msg.senderId === user.uid ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    <div
-                                        className={`max-w-[70%] rounded-lg px-4 py-2 text-sm ${msg.senderId === user.uid
-                                            ? 'bg-primary text-white rounded-br-none'
-                                            : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none'
-                                            }`}
-                                    >
-                                        {msg.imageUrl && (
-                                            <img src={msg.imageUrl} alt="Shared" className="rounded-md mb-2 max-w-full h-auto" />
-                                        )}
-                                        {msg.text && <p>{msg.text}</p>}
-                                        <p className={`text-xs mt-1 ${msg.senderId === user.uid ? 'text-indigo-200' : 'text-gray-400'}`}>
+                                    <div className={`max-w-xs lg:max-w-md space-y-1`}>
+                                        <div
+                                            className={`px-4 py-2 rounded-2xl ${msg.senderId === user.uid
+                                                ? 'bg-primary text-white rounded-br-none'
+                                                : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none'
+                                                }`}
+                                        >
+                                            {msg.imageUrl && (
+                                                <img src={msg.imageUrl} alt="Shared" className="rounded-md mb-2 max-w-full h-auto" />
+                                            )}
+                                            {msg.text && <p className="text-sm">{msg.text}</p>}
+                                        </div>
+                                        <span className={`text-xs text-gray-400 px-4 block ${msg.senderId === user.uid ? 'text-right' : 'text-left'}`}>
                                             {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
-                                        </p>
+                                        </span>
                                     </div>
                                 </div>
                             ))}
                             <div ref={messagesEndRef} />
                         </div>
 
+                        {/* Message Input */}
                         <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-200">
                             {imageFile && (
                                 <div className="mb-2 flex items-center bg-gray-100 p-2 rounded-md">
@@ -254,13 +415,13 @@ export default function Messages() {
                                     <button type="button" onClick={() => setImageFile(null)} className="text-red-500 text-sm ml-2">Remove</button>
                                 </div>
                             )}
-                            <div className="flex space-x-2">
+                            <div className="flex gap-2">
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="p-2 text-gray-500 hover:text-primary transition-colors"
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                                 >
-                                    <ImageIcon className="w-6 h-6" />
+                                    <Paperclip className="w-5 h-5 text-gray-500" />
                                 </button>
                                 <input
                                     type="file"
@@ -271,7 +432,7 @@ export default function Messages() {
                                 />
                                 <input
                                     type="text"
-                                    className="flex-1 border-gray-300 rounded-full shadow-sm focus:ring-primary focus:border-primary px-4 py-2 border"
+                                    className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
                                     placeholder="Type a message..."
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
@@ -279,16 +440,16 @@ export default function Messages() {
                                 <button
                                     type="submit"
                                     disabled={(!newMessage.trim() && !imageFile) || isUploading}
-                                    className="bg-primary text-white p-2 rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                                    className="bg-primary text-white p-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                                 >
-                                    {isUploading ? <Loader className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                    <Send className="w-5 h-5" />
                                 </button>
                             </div>
                         </form>
                     </>
                 ) : (
                     <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50">
-                        Select a conversation to start chatting
+                        <p>Select a conversation to start messaging</p>
                     </div>
                 )}
             </div>

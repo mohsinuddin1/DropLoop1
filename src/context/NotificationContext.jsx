@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, doc, getDoc, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 const NotificationContext = createContext();
 
@@ -34,7 +34,7 @@ export const NotificationProvider = ({ children }) => {
     const addNotification = (notification) => {
         setNotifications(prev => [notification, ...prev]);
         setUnreadCount(prev => prev + 1);
-        
+
         // Show browser notification
         showBrowserNotification(
             notification.title,
@@ -64,6 +64,8 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         if (!user) return;
 
+        const listenerStartTime = Date.now(); // Track when listener starts
+
         const bidsQuery = query(
             collection(db, 'bids'),
             where('bidderId', '==', user.uid)
@@ -73,15 +75,16 @@ export const NotificationProvider = ({ children }) => {
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === 'modified') {
                     const bidData = change.doc.data();
-                    const oldData = change.doc.metadata.hasPendingWrites ? null : change.doc.data();
-                    
-                    // Check if status changed to 'accepted'
-                    if (bidData.status === 'accepted' && (!oldData || oldData.status !== 'accepted')) {
+                    const bidUpdateTime = bidData.updatedAt?.toMillis() || bidData.createdAt?.toMillis() || 0;
+
+                    // Check if status changed to 'accepted' AND the update happened after listener started
+                    // This prevents notifications for already-accepted bids when the listener first loads
+                    if (bidData.status === 'accepted' && bidUpdateTime > listenerStartTime) {
                         // Get post owner's name
                         try {
                             const postDoc = await getDoc(doc(db, 'posts', bidData.postId));
-                            const postOwnerName = postDoc.exists() 
-                                ? postDoc.data().userDisplayName 
+                            const postOwnerName = postDoc.exists()
+                                ? postDoc.data().userDisplayName
                                 : 'Post Owner';
 
                             addNotification({
@@ -120,4 +123,3 @@ export const NotificationProvider = ({ children }) => {
         </NotificationContext.Provider>
     );
 };
-
