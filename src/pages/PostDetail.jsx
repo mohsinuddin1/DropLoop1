@@ -62,6 +62,10 @@ export default function PostDetail() {
     const isTravel = post.type === 'travel';
     const isOwner = user?.uid === post.userId;
 
+    // Backward compatibility: handle old posts with 'date' field
+    const departureDate = post.departureDate || post.date;
+    const arrivalDate = post.arrivalDate || post.date;
+
     return (
         <div className="max-w-5xl mx-auto">
             {/* Back Button */}
@@ -125,8 +129,20 @@ export default function PostDetail() {
                             <div className="space-y-3">
                                 <div className="flex items-center text-gray-600">
                                     <Calendar className="w-5 h-5 mr-3 text-gray-400" />
-                                    <span>{post.date}</span>
+                                    <div>
+                                        <span className="font-medium">{isTravel ? 'Departure' : 'Pickup'}: </span>
+                                        <span>{departureDate}</span>
+                                    </div>
                                 </div>
+                                {arrivalDate && arrivalDate !== departureDate && (
+                                    <div className="flex items-center text-gray-600">
+                                        <Calendar className="w-5 h-5 mr-3 text-gray-400" />
+                                        <div>
+                                            <span className="font-medium">{isTravel ? 'Arrival' : 'Delivery'}: </span>
+                                            <span>{arrivalDate}</span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {isTravel ? (
                                     <div className="flex items-center text-gray-600">
@@ -201,8 +217,8 @@ export default function PostDetail() {
                                                 </div>
                                             </div>
                                             <span className={`px-2 py-1 rounded text-xs font-medium ${bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                    bid.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                                                        'bg-red-100 text-red-800'
+                                                bid.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                                                    'bg-red-100 text-red-800'
                                                 }`}>
                                                 {bid.status}
                                             </span>

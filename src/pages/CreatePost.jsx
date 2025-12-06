@@ -16,7 +16,8 @@ export default function CreatePost() {
     // Common fields
     const [from, setFrom] = useState('');
     const [to, setTo] = useState('');
-    const [date, setDate] = useState('');
+    const [departureDate, setDepartureDate] = useState('');
+    const [arrivalDate, setArrivalDate] = useState('');
 
     // Travel specific
     const [mode, setMode] = useState('flight'); // flight, train, bus, car
@@ -37,7 +38,8 @@ export default function CreatePost() {
                 type: postType,
                 from,
                 to,
-                date, // Travel date or Delivery deadline
+                departureDate,
+                arrivalDate,
                 userId: user.uid,
                 userDisplayName: user.displayName,
                 userPhotoURL: user.photoURL,
@@ -128,21 +130,40 @@ export default function CreatePost() {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {postType === 'travel' ? 'Date of Travel' : 'Latest Delivery Date'}
-                        </label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Calendar className="h-5 w-5 text-gray-400" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {postType === 'travel' ? 'Departure Date' : 'Pickup Date'}
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Calendar className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="date"
+                                    required
+                                    className="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border"
+                                    value={departureDate}
+                                    onChange={(e) => setDepartureDate(e.target.value)}
+                                />
                             </div>
-                            <input
-                                type="date"
-                                required
-                                className="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {postType === 'travel' ? 'Arrival Date' : 'Delivery Date'}
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Calendar className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="date"
+                                    required
+                                    className="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm py-2 border"
+                                    value={arrivalDate}
+                                    onChange={(e) => setArrivalDate(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
 

@@ -6,6 +6,10 @@ export default function PostCard({ post, onBid }) {
     const navigate = useNavigate();
     const isTravel = post.type === 'travel';
 
+    // Backward compatibility: handle old posts with 'date' field
+    const departureDate = post.departureDate || post.date;
+    const arrivalDate = post.arrivalDate || post.date;
+
     const handleCardClick = (e) => {
         // Don't navigate if clicking the bid button
         if (e.target.closest('button')) return;
@@ -65,7 +69,7 @@ export default function PostCard({ post, onBid }) {
                 <div className="space-y-2 mb-6">
                     <div className="flex items-center text-sm text-gray-600">
                         <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>{post.date}</span>
+                        <span>{departureDate}{arrivalDate && arrivalDate !== departureDate ? ` → ${arrivalDate}` : ''}</span>
                     </div>
 
                     {isTravel ? (
