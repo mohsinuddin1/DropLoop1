@@ -63,8 +63,8 @@ export default function CreatePost() {
                 }
             }
 
-            await addDoc(collection(db, 'posts'), postData);
-            navigate('/posts');
+            const newPost = await addDoc(collection(db, 'posts'), postData);
+            navigate(`/posts/${newPost.id}`);
         } catch (err) {
             console.error("Error adding document: ", err);
             setError('Failed to create post. Please try again.');

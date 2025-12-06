@@ -73,7 +73,7 @@ export default function Home() {
                                             <Users className="h-8 w-8 text-accent flex-shrink-0" />
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-medium truncate">3 Offers</p>
-                                                <p className="text-xs text-muted-foreground">From $45</p>
+                                                <p className="text-xs text-muted-foreground">From ₹45</p>
                                             </div>
                                         </div>
                                     </div>

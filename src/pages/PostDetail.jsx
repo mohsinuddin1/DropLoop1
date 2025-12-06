@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { doc, getDoc, collection, query, where, onSnapshot, orderBy, updateDoc, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
-import { ArrowLeft, Plane, Package, MapPin, Calendar, Weight, MessageSquare, Share2 } from 'lucide-react';
+import { ArrowLeft, Plane, Package, MapPin, Calendar, Weight, MessageSquare, Share2, X, Edit, Save, Upload } from 'lucide-react';
 import BidModal from '../components/BidModal';
 import { useNotifications } from '../context/NotificationContext';
+import { uploadImage } from '../utils/uploadImage';
 
 export default function PostDetail() {
     const { postId } = useParams();
@@ -17,6 +18,23 @@ export default function PostDetail() {
     const [bids, setBids] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isBidModalOpen, setIsBidModalOpen] = useState(false);
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+
+    // Edit form state
+    const [editFrom, setEditFrom] = useState('');
+    const [editTo, setEditTo] = useState('');
+    const [editDepartureDate, setEditDepartureDate] = useState('');
+    const [editArrivalDate, setEditArrivalDate] = useState('');
+    const [editItemName, setEditItemName] = useState('');
+    const [editItemWeight, setEditItemWeight] = useState('');
+    const [editOfferPrice, setEditOfferPrice] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+    const [editMode, setEditMode] = useState('');
+    const [editImageFile, setEditImageFile] = useState(null);
+    const [editImagePreview, setEditImagePreview] = useState('');
+    const [showShareToast, setShowShareToast] = useState(false);
 
     // Fetch post data
     useEffect(() => {
@@ -25,6 +43,7 @@ export default function PostDetail() {
                 const postDoc = await getDoc(doc(db, 'posts', postId));
                 if (postDoc.exists()) {
                     setPost({ id: postDoc.id, ...postDoc.data() });
+                    setLoading(false); // Set loading to false as soon as post is loaded
                 } else {
                     navigate('/posts');
                 }
@@ -33,6 +52,7 @@ export default function PostDetail() {
                 if (error.code === 'permission-denied') {
                     console.error('Firestore permission denied. Make sure Firestore security rules are deployed.');
                 }
+                setLoading(false); // Set loading to false even on error
             }
         };
         fetchPost();
@@ -43,12 +63,18 @@ export default function PostDetail() {
         if (!postId) return;
         const q = query(
             collection(db, 'bids'),
-            where('postId', '==', postId),
-            orderBy('createdAt', 'desc')
+            where('postId', '==', postId)
+            // Removed orderBy to allow bids with null createdAt (from serverTimestamp) to appear immediately
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            setBids(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoading(false);
+            const bidsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Sort in-memory, handling null timestamps
+            bidsData.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis() || Date.now();
+                const timeB = b.createdAt?.toMillis() || Date.now();
+                return timeB - timeA; // Descending order
+            });
+            setBids(bidsData);
         });
         return () => unsubscribe();
     }, [postId]);
@@ -132,19 +158,153 @@ export default function PostDetail() {
     const departureDate = post.departureDate || post.date;
     const arrivalDate = post.arrivalDate || post.date;
 
+    // Initialize edit form when entering edit mode
+    const handleEnterEditMode = () => {
+        setEditFrom(post.from);
+        setEditTo(post.to);
+        setEditDepartureDate(post.departureDate || post.date);
+        setEditArrivalDate(post.arrivalDate || post.date);
+        setEditItemName(post.itemName || '');
+        setEditItemWeight(post.itemWeight || '');
+        setEditOfferPrice(post.offerPrice || '');
+        setEditDescription(post.description || '');
+        setEditMode(post.mode || 'flight');
+        setEditImageFile(null);
+        setEditImagePreview(post.imageUrl || '');
+        setIsEditMode(true);
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditMode(false);
+        setEditImageFile(null);
+        setEditImagePreview('');
+    };
+
+    const handleImageChange = (e) => {
+        if (e.target.files[0]) {
+            const file = e.target.files[0];
+            setEditImageFile(file);
+            setEditImagePreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleSaveEdit = async () => {
+        try {
+            setEditLoading(true);
+            const updates = {
+                from: editFrom,
+                to: editTo,
+                departureDate: editDepartureDate,
+                arrivalDate: editArrivalDate,
+            };
+
+            if (isTravel) {
+                updates.mode = editMode;
+                if (editOfferPrice) updates.offerPrice = Number(editOfferPrice);
+            } else {
+                updates.itemName = editItemName;
+                updates.itemWeight = editItemWeight;
+                if (editOfferPrice) updates.offerPrice = Number(editOfferPrice);
+                updates.description = editDescription;
+
+                // Upload new image if changed
+                if (editImageFile) {
+                    const imageUrl = await uploadImage(editImageFile, 'item-images');
+                    updates.imageUrl = imageUrl;
+                }
+            }
+
+            await updateDoc(doc(db, 'posts', postId), updates);
+
+            // Update local state
+            setPost({ ...post, ...updates });
+            setIsEditMode(false);
+            setEditImageFile(null);
+            setEditImagePreview('');
+            setEditLoading(false);
+        } catch (error) {
+            console.error('Error updating post:', error);
+            alert('Failed to update post');
+            setEditLoading(false);
+        }
+    };
+
+    const handleShare = async () => {
+        const shareUrl = window.location.href;
+        const shareTitle = isTravel
+            ? `Travel to ${post.to}`
+            : `${post.itemName} - ${post.from} to ${post.to}`;
+        const shareText = isTravel
+            ? `Check out this travel opportunity from ${post.from} to ${post.to} on DropLoop!`
+            : `Check out this item delivery: ${post.itemName} (${post.itemWeight}kg) from ${post.from} to ${post.to} on DropLoop!`;
+
+        try {
+            // Try Web Share API first (mobile devices)
+            if (navigator.share) {
+                await navigator.share({
+                    title: shareTitle,
+                    text: shareText,
+                    url: shareUrl,
+                });
+            } else {
+                // Fallback to clipboard
+                await navigator.clipboard.writeText(shareUrl);
+                setShowShareToast(true);
+                setTimeout(() => setShowShareToast(false), 3000);
+            }
+        } catch (error) {
+            // User cancelled or error occurred
+            if (error.name !== 'AbortError') {
+                console.error('Error sharing:', error);
+            }
+        }
+    };
+
     return (
         <div className="max-w-6xl mx-auto">
             <div className="grid gap-8 lg:grid-cols-3">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Back Button */}
-                    <button
-                        onClick={() => navigate('/posts')}
-                        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back to Posts
-                    </button>
+                    {/* Header with Back and Edit buttons */}
+                    <div className="flex items-center justify-between">
+                        <button
+                            onClick={() => navigate('/posts')}
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back to Posts
+                        </button>
+
+                        {isOwner && !isEditMode && (
+                            <button
+                                onClick={handleEnterEditMode}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                            >
+                                <Edit className="w-4 h-4" />
+                                Edit Post
+                            </button>
+                        )}
+
+                        {isOwner && isEditMode && (
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleCancelEdit}
+                                    disabled={editLoading}
+                                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveEdit}
+                                    disabled={editLoading}
+                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 text-sm"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    {editLoading ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Post Header */}
                     <div className="space-y-4">
@@ -189,16 +349,44 @@ export default function PostDetail() {
                     </div>
 
                     {/* Image */}
-                    <div className="w-full h-96 rounded-xl overflow-hidden border border-gray-200">
-                        {post.imageUrl ? (
-                            <img
-                                src={post.imageUrl}
-                                alt={post.itemName || 'Post'}
-                                className="w-full h-full object-cover"
-                            />
+                    <div className="w-full h-96 rounded-xl overflow-hidden border border-gray-200 relative">
+                        {(editImagePreview || post.imageUrl) && !isTravel ? (
+                            <>
+                                <img
+                                    src={editImagePreview || post.imageUrl}
+                                    alt={post.itemName || 'Post'}
+                                    onClick={() => !isEditMode && setIsImageModalOpen(true)}
+                                    className={`w-full h-full object-cover ${!isEditMode ? 'cursor-pointer hover:opacity-90' : ''} transition-opacity`}
+                                />
+                                {isEditMode && isOwner && (
+                                    <label className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center cursor-pointer hover:bg-opacity-50 transition-all">
+                                        <div className="text-center text-white">
+                                            <Upload className="h-12 w-12 mx-auto mb-2" />
+                                            <p className="text-sm font-medium">Click to change image</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                            </>
                         ) : (
                             <div className="w-full h-full bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
-                                {isTravel ? (
+                                {isEditMode && !isTravel && isOwner ? (
+                                    <label className="cursor-pointer text-center">
+                                        <Upload className="h-12 w-12 text-primary mx-auto mb-2" />
+                                        <p className="text-primary font-medium">Click to upload image</p>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                ) : isTravel ? (
                                     <Plane className="h-24 w-24 text-gray-300" />
                                 ) : (
                                     <Package className="h-24 w-24 text-gray-300" />
@@ -211,17 +399,35 @@ export default function PostDetail() {
                     <div className="grid grid-cols-2 gap-6 p-6 rounded-xl bg-white border border-gray-200">
                         <div className="space-y-2">
                             <p className="text-sm text-gray-500">From</p>
-                            <div className="flex items-center gap-2">
-                                <MapPin className="h-5 w-5 text-primary" />
-                                <p className="font-semibold text-lg text-gray-900">{post.from}</p>
-                            </div>
+                            {isEditMode ? (
+                                <input
+                                    type="text"
+                                    value={editFrom}
+                                    onChange={(e) => setEditFrom(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <MapPin className="h-5 w-5 text-primary" />
+                                    <p className="font-semibold text-lg text-gray-900">{post.from}</p>
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <p className="text-sm text-gray-500">To</p>
-                            <div className="flex items-center gap-2">
-                                <MapPin className="h-5 w-5 text-purple-600" />
-                                <p className="font-semibold text-lg text-gray-900">{post.to}</p>
-                            </div>
+                            {isEditMode ? (
+                                <input
+                                    type="text"
+                                    value={editTo}
+                                    onChange={(e) => setEditTo(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                />
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <MapPin className="h-5 w-5 text-purple-600" />
+                                    <p className="font-semibold text-lg text-gray-900">{post.to}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -233,51 +439,131 @@ export default function PostDetail() {
                                 <>
                                     <div className="p-4 rounded-lg bg-white border border-gray-200">
                                         <p className="text-sm text-gray-500 mb-2">Mode</p>
-                                        <p className="font-semibold text-gray-900 capitalize">{post.mode}</p>
+                                        {isEditMode ? (
+                                            <select
+                                                value={editMode}
+                                                onChange={(e) => setEditMode(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            >
+                                                <option value="flight">Flight</option>
+                                                <option value="train">Train</option>
+                                                <option value="bus">Bus</option>
+                                                <option value="car">Car</option>
+                                            </select>
+                                        ) : (
+                                            <p className="font-semibold text-gray-900 capitalize">{post.mode}</p>
+                                        )}
                                     </div>
                                     <div className="p-4 rounded-lg bg-white border border-gray-200">
                                         <p className="text-sm text-gray-500 mb-2">Departure Date</p>
-                                        <p className="font-semibold text-gray-900">{departureDate}</p>
+                                        {isEditMode ? (
+                                            <input
+                                                type="date"
+                                                value={editDepartureDate}
+                                                onChange={(e) => setEditDepartureDate(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            />
+                                        ) : (
+                                            <p className="font-semibold text-gray-900">{departureDate}</p>
+                                        )}
                                     </div>
-                                    {arrivalDate && arrivalDate !== departureDate && (
+                                    {(arrivalDate && arrivalDate !== departureDate) || isEditMode ? (
                                         <div className="p-4 rounded-lg bg-white border border-gray-200">
                                             <p className="text-sm text-gray-500 mb-2">Arrival Date</p>
-                                            <p className="font-semibold text-gray-900">{arrivalDate}</p>
+                                            {isEditMode ? (
+                                                <input
+                                                    type="date"
+                                                    value={editArrivalDate}
+                                                    onChange={(e) => setEditArrivalDate(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                                />
+                                            ) : (
+                                                <p className="font-semibold text-gray-900">{arrivalDate}</p>
+                                            )}
                                         </div>
-                                    )}
+                                    ) : null}
                                 </>
                             ) : (
                                 <>
                                     <div className="p-4 rounded-lg bg-white border border-gray-200">
                                         <p className="text-sm text-gray-500 mb-2">Item Name</p>
-                                        <p className="font-semibold text-gray-900">{post.itemName}</p>
+                                        {isEditMode ? (
+                                            <input
+                                                type="text"
+                                                value={editItemName}
+                                                onChange={(e) => setEditItemName(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            />
+                                        ) : (
+                                            <p className="font-semibold text-gray-900">{post.itemName}</p>
+                                        )}
                                     </div>
                                     <div className="p-4 rounded-lg bg-white border border-gray-200">
                                         <p className="text-sm text-gray-500 mb-2">Weight</p>
-                                        <p className="font-semibold text-gray-900">{post.itemWeight} kg</p>
+                                        {isEditMode ? (
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={editItemWeight}
+                                                onChange={(e) => setEditItemWeight(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                                placeholder="kg"
+                                            />
+                                        ) : (
+                                            <p className="font-semibold text-gray-900">{post.itemWeight} kg</p>
+                                        )}
                                     </div>
-                                    {post.offerPrice && (
+                                    {(post.offerPrice || isEditMode) && (
                                         <div className="p-4 rounded-lg bg-white border border-gray-200">
                                             <p className="text-sm text-gray-500 mb-2">Offer Price</p>
-                                            <p className="font-semibold text-primary text-lg">₹{post.offerPrice}</p>
+                                            {isEditMode ? (
+                                                <input
+                                                    type="number"
+                                                    value={editOfferPrice}
+                                                    onChange={(e) => setEditOfferPrice(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                                    placeholder="₹"
+                                                />
+                                            ) : (
+                                                <p className="font-semibold text-primary text-lg">₹{post.offerPrice}</p>
+                                            )}
                                         </div>
                                     )}
                                     <div className="p-4 rounded-lg bg-white border border-gray-200">
                                         <p className="text-sm text-gray-500 mb-2">Pickup Date</p>
-                                        <p className="font-semibold text-gray-900">{departureDate}</p>
+                                        {isEditMode ? (
+                                            <input
+                                                type="date"
+                                                value={editDepartureDate}
+                                                onChange={(e) => setEditDepartureDate(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            />
+                                        ) : (
+                                            <p className="font-semibold text-gray-900">{departureDate}</p>
+                                        )}
                                     </div>
-                                    <div className="p-4 rounded-lg bg-white border border-gray-200">
-                                        <p className="text-sm text-gray-500 mb-2">Bids Received</p>
-                                        <p className="font-semibold text-gray-900">{bids.length} offers</p>
-                                    </div>
+                                    {!isEditMode && (
+                                        <div className="p-4 rounded-lg bg-white border border-gray-200">
+                                            <p className="text-sm text-gray-500 mb-2">Bids Received</p>
+                                            <p className="font-semibold text-gray-900">{bids.length} offers</p>
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>
 
-                        {post.description && (
+                        {post.description && !isTravel && (
                             <div className="p-4 rounded-lg bg-white border border-gray-200">
                                 <p className="text-sm text-gray-500 mb-2">Description</p>
-                                <p className="text-gray-900">{post.description}</p>
+                                {isEditMode ? (
+                                    <textarea
+                                        value={editDescription}
+                                        onChange={(e) => setEditDescription(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 h-24 resize-none"
+                                    />
+                                ) : (
+                                    <p className="text-gray-900">{post.description}</p>
+                                )}
                             </div>
                         )}
                     </div>
@@ -318,7 +604,7 @@ export default function PostDetail() {
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-2xl font-bold text-primary">${bid.amount}</p>
+                                                <p className="text-2xl font-bold text-primary">₹{bid.amount}</p>
                                                 <span className={`inline-block px-2 py-1 text-xs rounded font-medium ${bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                                     bid.status === 'accepted' ? 'bg-green-100 text-green-800' :
                                                         'bg-red-100 text-red-800'
@@ -412,7 +698,10 @@ export default function PostDetail() {
                                     Contact Bidders
                                 </button>
                             )}
-                            <button className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                            <button
+                                onClick={handleShare}
+                                className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                            >
                                 <Share2 className="h-4 w-4" />
                                 Share
                             </button>
@@ -428,6 +717,37 @@ export default function PostDetail() {
                     isOpen={isBidModalOpen}
                     onClose={() => setIsBidModalOpen(false)}
                 />
+            )}
+
+            {/* Image Modal */}
+            {isImageModalOpen && post.imageUrl && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
+                    onClick={() => setIsImageModalOpen(false)}
+                >
+                    <button
+                        onClick={() => setIsImageModalOpen(false)}
+                        className="absolute top-4 right-4 p-2 bg-white rounded-full hover:bg-gray-100 transition-colors z-10"
+                    >
+                        <X className="h-6 w-6 text-gray-900" />
+                    </button>
+                    <img
+                        src={post.imageUrl}
+                        alt={post.itemName || 'Post'}
+                        onClick={(e) => e.stopPropagation()}
+                        className="max-w-full max-h-full object-contain rounded-lg"
+                    />
+                </div>
+            )}
+
+            {/* Share Toast */}
+            {showShareToast && (
+                <div className="fixed bottom-8 right-8 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-fade-in">
+                    <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="font-medium">Link copied to clipboard!</span>
+                </div>
             )}
         </div>
     );

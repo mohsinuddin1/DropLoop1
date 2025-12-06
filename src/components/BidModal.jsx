@@ -3,9 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { X } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function BidModal({ post, isOpen, onClose }) {
     const { user } = useAuth();
+    const toast = useToast();
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -13,11 +15,12 @@ export default function BidModal({ post, isOpen, onClose }) {
     const [checkingBid, setCheckingBid] = useState(true);
 
     useEffect(() => {
-        if (!isOpen || !user || !post) {
+        if (!user || !post) {
             setCheckingBid(false);
             return;
         }
 
+        // Only check once when component mounts with valid user and post
         const checkExistingBid = async () => {
             setCheckingBid(true);
             try {
@@ -46,14 +49,14 @@ export default function BidModal({ post, isOpen, onClose }) {
         };
 
         checkExistingBid();
-    }, [isOpen, user, post]);
+    }, [user?.uid, post?.id]); // Only re-run if user or post ID changes
 
     if (!isOpen) return null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!user) {
-            alert("Please login to place a bid");
+            toast.error('Please login to place a bid');
             return;
         }
 
@@ -68,10 +71,10 @@ export default function BidModal({ post, isOpen, onClose }) {
                     updatedAt: serverTimestamp()
                 });
                 onClose();
-                alert("Bid updated successfully!");
+                toast.success('Bid updated successfully!');
             } catch (error) {
                 console.error("Error updating bid:", error);
-                alert("Failed to update bid");
+                toast.error('Failed to update bid');
             }
             setLoading(false);
         } else {
@@ -93,10 +96,10 @@ export default function BidModal({ post, isOpen, onClose }) {
                     createdAt: serverTimestamp()
                 });
                 onClose();
-                alert("Bid placed successfully!");
+                toast.success('Bid placed successfully!');
             } catch (error) {
                 console.error("Error placing bid:", error);
-                alert("Failed to place bid");
+                toast.error('Failed to place bid');
             }
             setLoading(false);
         }
