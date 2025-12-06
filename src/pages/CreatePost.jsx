@@ -51,6 +51,13 @@ export default function CreatePost() {
             if (postType === 'travel') {
                 postData.mode = mode;
                 if (offerPrice) postData.offerPrice = Number(offerPrice);
+
+
+                // Upload image for travel if provided
+                if (imageFile) {
+                    const imageUrl = await uploadImage(imageFile, 'item-images');
+                    postData.imageUrl = imageUrl;
+                }
             } else {
                 postData.itemName = itemName;
                 postData.itemWeight = itemWeight;
@@ -316,6 +323,46 @@ export default function CreatePost() {
                                 value={offerPrice}
                                 onChange={(e) => setOfferPrice(e.target.value)}
                             />
+                        </div>
+
+                        {/* Image Upload for Travel */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Travel Photo (Optional)</label>
+                            <div className="relative">
+                                {!imageFile ? (
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
+                                            <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                if (e.target.files[0]) setImageFile(e.target.files[0]);
+                                            }}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                ) : (
+                                    <div className="relative">
+                                        <img
+                                            src={URL.createObjectURL(imageFile)}
+                                            alt="Travel"
+                                            className="w-full h-32 object-cover rounded-lg"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setImageFile(null)}
+                                            className="absolute -top-2 -right-2 p-1.5 bg-red-500 rounded-full hover:bg-red-600 transition-colors"
+                                        >
+                                            <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="space-y-2">

@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { Plane, Package, MapPin, Calendar, Weight, ArrowRight } from 'lucide-react';
+import { Plane, Package, MapPin, Calendar, Weight, ArrowRight, Car, Bus, Train } from 'lucide-react';
 
 export default function PostCard({ post, onBid }) {
     const navigate = useNavigate();
@@ -19,6 +19,42 @@ export default function PostCard({ post, onBid }) {
         // Don't navigate if clicking buttons or user profile
         if (e.target.closest('button')) return;
         navigate(`/posts/${post.id}`);
+    };
+
+    // Get mode-specific icon for travel posts
+    const getModeIcon = (mode) => {
+        const iconProps = { className: "h-12 w-12 opacity-20" };
+        const iconPropsSmall = { className: "h-5 w-5 opacity-20" };
+
+        switch (mode?.toLowerCase()) {
+            case 'flight':
+                return <Plane {...iconProps} />;
+            case 'train':
+                return <Train {...iconProps} />;
+            case 'bus':
+                return <Bus {...iconProps} />;
+            case 'car':
+                return <Car {...iconProps} />;
+            default:
+                return <Plane {...iconProps} />;
+        }
+    };
+
+    const getModeIconSmall = (mode) => {
+        const iconProps = { className: "h-5 w-5 opacity-20" };
+
+        switch (mode?.toLowerCase()) {
+            case 'flight':
+                return <Plane {...iconProps} />;
+            case 'train':
+                return <Train {...iconProps} />;
+            case 'bus':
+                return <Bus {...iconProps} />;
+            case 'car':
+                return <Car {...iconProps} />;
+            default:
+                return <Plane {...iconProps} />;
+        }
     };
 
     return (
@@ -40,7 +76,7 @@ export default function PostCard({ post, onBid }) {
                         ) : (
                             <div className="flex flex-col items-center justify-center w-full h-full text-gray-400">
                                 {isTravel ? (
-                                    <Plane className="h-5 w-5 opacity-20" />
+                                    getModeIconSmall(post.mode)
                                 ) : (
                                     <Package className="h-5 w-5 opacity-20" />
                                 )}
@@ -130,7 +166,7 @@ export default function PostCard({ post, onBid }) {
                     ) : (
                         <div className="flex flex-col items-center justify-center gap-2 text-gray-400">
                             {isTravel ? (
-                                <Plane className="h-12 w-12 opacity-20" />
+                                getModeIcon(post.mode)
                             ) : (
                                 <Package className="h-12 w-12 opacity-20" />
                             )}
