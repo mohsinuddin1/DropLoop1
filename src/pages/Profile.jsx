@@ -172,74 +172,74 @@ export default function Profile() {
     return (
         <div className="max-w-6xl mx-auto">
             {/* Profile Header */}
-            <div className="mb-8 rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-                <div className="px-6 py-12">
-                    <div className="flex items-start justify-between gap-6">
-                        <div className="flex items-start gap-6">
+            <div className="mb-4 sm:mb-6 md:mb-8 rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+                <div className="px-3 sm:px-6 py-6 sm:py-8 md:py-12">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 md:gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 md:gap-6">
                             <div className="relative">
                                 {profileUser.photoURL ? (
                                     <img
                                         src={profileUser.photoURL}
                                         alt={profileUser.displayName}
-                                        className="h-24 w-24 rounded-full border-4 border-white shadow-lg object-cover"
+                                        className="h-16 sm:h-20 md:h-24 w-16 sm:w-20 md:w-24 rounded-full border-4 border-white shadow-lg object-cover"
                                     />
                                 ) : (
-                                    <div className="h-24 w-24 rounded-full border-4 border-white bg-indigo-100 flex items-center justify-center text-primary text-3xl font-bold shadow-lg">
+                                    <div className="h-16 sm:h-20 md:h-24 w-16 sm:w-20 md:w-24 rounded-full border-4 border-white bg-indigo-100 flex items-center justify-center text-primary text-xl sm:text-2xl md:text-3xl font-bold shadow-lg">
                                         {profileUser.displayName?.[0]?.toUpperCase() || 'U'}
                                     </div>
                                 )}
                                 {isOwnProfile && isEditing && (
                                     <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
-                                        <Edit2 className="h-6 w-6 text-white" />
+                                        <Edit2 className="h-4 sm:h-5 md:h-6 w-4 sm:w-5 md:w-6 text-white" />
                                         <input type="file" accept="image/*" className="hidden" onChange={handleProfilePicChange} disabled={uploading} />
                                     </label>
                                 )}
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-2 sm:space-y-2.5 md:space-y-3 flex-1">
                                 {isEditing ? (
                                     <input
                                         type="text"
                                         value={editForm.displayName || profileUser.displayName}
                                         onChange={(e) => handleInputChange(e, 'displayName')}
-                                        className="text-4xl font-bold bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-900"
+                                        className="text-xl sm:text-2xl md:text-4xl font-bold bg-white border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-gray-900 w-full"
                                     />
                                 ) : (
-                                    <h1 className="text-4xl font-bold text-gray-900">{profileUser.displayName}</h1>
+                                    <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-gray-900">{profileUser.displayName}</h1>
                                 )}
 
-                                <div className="flex items-center gap-4 flex-wrap">
-                                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white border border-gray-200">
-                                        <Star className="h-4 w-4 fill-primary text-primary" />
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-2 md:gap-4 flex-wrap">
+                                    <div className="flex items-center gap-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg bg-white border border-gray-200 text-xs">
+                                        <Star className="h-3 w-3 fill-primary text-primary" />
                                         <span className="font-semibold text-gray-900">{averageRating}</span>
-                                        <span className="text-sm text-gray-500">({reviews.length} reviews)</span>
+                                        <span className="text-xs text-gray-500">({reviews.length})</span>
                                     </div>
 
-                                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white border border-gray-200">
-                                        <Award className="h-4 w-4 text-purple-600" />
-                                        <span className="text-sm text-gray-900">{completedDeliveries} Deliveries</span>
+                                    <div className="flex items-center gap-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg bg-white border border-gray-200 text-xs">
+                                        <Award className="h-3 w-3 text-purple-600" />
+                                        <span className="text-xs text-gray-900">{completedDeliveries} Deliveries</span>
                                     </div>
 
-                                    <div className="text-sm text-gray-600">
+                                    <div className="text-xs text-gray-600">
                                         Joined {userProfile?.joinDate || new Date().getFullYear()}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto">
                             {isOwnProfile ? (
                                 isEditing ? (
                                     <>
                                         <button
                                             onClick={handleEditSave}
-                                            className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                                            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm"
                                         >
-                                            Save Changes
+                                            Save
                                         </button>
                                         <button
                                             onClick={() => setIsEditing(false)}
-                                            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
                                         >
                                             Cancel
                                         </button>
@@ -247,19 +247,19 @@ export default function Profile() {
                                 ) : (
                                     <button
                                         onClick={() => setIsEditing(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
                                     >
-                                        <Edit2 className="h-4 w-4" />
-                                        Edit Profile
+                                        <Edit2 className="h-3 w-3" />
+                                        <span className="hidden sm:inline">Edit Profile</span>
                                     </button>
                                 )
                             ) : (
                                 <button
                                     onClick={() => navigate(`/messages?userId=${targetUserId}`)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm"
                                 >
-                                    <MessageSquare className="h-4 w-4" />
-                                    Message
+                                    <MessageSquare className="h-3 w-3" />
+                                    <span className="hidden sm:inline">Message</span>
                                 </button>
                             )}
                         </div>
@@ -268,35 +268,35 @@ export default function Profile() {
             </div>
 
             {/* Content */}
-            <div className="grid gap-8 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 md:gap-8 lg:grid-cols-3">
                 {/* Main Content */}
-                <div className="lg:col-span-2 space-y-8">
+                <div className="lg:col-span-2 space-y-4 sm:space-y-6 md:space-y-8">
                     {/* About Section */}
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-bold text-gray-900">About</h2>
+                    <div className="space-y-2 sm:space-y-3 md:space-y-4">
+                        <h2 className="text-base sm:text-xl md:text-2xl font-bold text-gray-900">About</h2>
                         {isEditing ? (
                             <textarea
                                 value={editForm.bio}
                                 onChange={(e) => handleInputChange(e, 'bio')}
-                                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors h-24 resize-none"
+                                className="w-full px-3 py-1.5 sm:py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors h-16 sm:h-20 md:h-24 resize-none"
                                 placeholder="Tell us about yourself..."
                             />
                         ) : (
-                            <p className="text-gray-600 text-lg">
+                            <p className="text-gray-600 text-xs sm:text-base md:text-lg">
                                 {userProfile?.bio || 'No bio added yet.'}
                             </p>
                         )}
                     </div>
 
                     {/* Details Section */}
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-bold text-gray-900">Details</h2>
+                    <div className="space-y-2 sm:space-y-3 md:space-y-4">
+                        <h2 className="text-base sm:text-xl md:text-2xl font-bold text-gray-900">Details</h2>
 
-                        <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                             {/* Profession */}
-                            <div className="p-4 rounded-lg bg-white border border-gray-200 space-y-2">
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <Briefcase className="h-4 w-4" />
+                            <div className="p-2.5 sm:p-3 md:p-4 rounded-lg bg-white border border-gray-200 space-y-1 sm:space-y-2">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <Briefcase className="h-3 w-3" />
                                     Profession
                                 </div>
                                 {isEditing ? (
@@ -304,18 +304,18 @@ export default function Profile() {
                                         type="text"
                                         value={editForm.profession}
                                         onChange={(e) => handleInputChange(e, 'profession')}
-                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 text-sm"
+                                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-xs"
                                         placeholder="Your profession"
                                     />
                                 ) : (
-                                    <p className="font-semibold text-gray-900">{userProfile?.profession || 'Not specified'}</p>
+                                    <p className="font-semibold text-gray-900 text-xs sm:text-sm">{userProfile?.profession || 'Not specified'}</p>
                                 )}
                             </div>
 
                             {/* Education */}
-                            <div className="p-4 rounded-lg bg-white border border-gray-200 space-y-2">
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <BookOpen className="h-4 w-4" />
+                            <div className="p-2.5 sm:p-3 md:p-4 rounded-lg bg-white border border-gray-200 space-y-1 sm:space-y-2">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <BookOpen className="h-3 w-3" />
                                     Education
                                 </div>
                                 {isEditing ? (
@@ -323,18 +323,18 @@ export default function Profile() {
                                         type="text"
                                         value={editForm.education}
                                         onChange={(e) => handleInputChange(e, 'education')}
-                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 text-sm"
+                                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-xs"
                                         placeholder="Your education"
                                     />
                                 ) : (
-                                    <p className="font-semibold text-gray-900">{userProfile?.education || 'Not specified'}</p>
+                                    <p className="font-semibold text-gray-900 text-xs sm:text-sm">{userProfile?.education || 'Not specified'}</p>
                                 )}
                             </div>
 
                             {/* Hometown */}
-                            <div className="p-4 rounded-lg bg-white border border-gray-200 space-y-2">
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <MapPin className="h-4 w-4" />
+                            <div className="p-2.5 sm:p-3 md:p-4 rounded-lg bg-white border border-gray-200 space-y-1 sm:space-y-2">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <MapPin className="h-3 w-3" />
                                     Hometown
                                 </div>
                                 {isEditing ? (
@@ -342,55 +342,55 @@ export default function Profile() {
                                         type="text"
                                         value={editForm.hometown}
                                         onChange={(e) => handleInputChange(e, 'hometown')}
-                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 text-sm"
+                                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-xs"
                                         placeholder="Your hometown"
                                     />
                                 ) : (
-                                    <p className="font-semibold text-gray-900">{userProfile?.hometown || 'Not specified'}</p>
+                                    <p className="font-semibold text-gray-900 text-xs sm:text-sm">{userProfile?.hometown || 'Not specified'}</p>
                                 )}
                             </div>
 
                             {/* Email */}
-                            <div className="p-4 rounded-lg bg-white border border-gray-200 space-y-2">
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <Mail className="h-4 w-4" />
+                            <div className="p-2.5 sm:p-3 md:p-4 rounded-lg bg-white border border-gray-200 space-y-1 sm:space-y-2">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <Mail className="h-3 w-3" />
                                     Email
                                 </div>
-                                <p className="font-semibold text-gray-900">{profileUser.email}</p>
+                                <p className="font-semibold text-gray-900 text-xs sm:text-sm">{profileUser.email}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Reviews Section */}
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-bold text-gray-900">Reviews ({reviews.length})</h2>
+                    <div className="space-y-2 sm:space-y-3 md:space-y-4">
+                        <h2 className="text-base sm:text-xl md:text-2xl font-bold text-gray-900">Reviews ({reviews.length})</h2>
 
                         {loading ? (
-                            <div className="text-center py-10 text-gray-500">Loading reviews...</div>
+                            <div className="text-center py-10 text-gray-500 text-xs sm:text-sm">Loading reviews...</div>
                         ) : reviews.length === 0 ? (
-                            <div className="p-12 text-center rounded-xl bg-white border border-gray-200">
-                                <Star className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500">No reviews yet</p>
+                            <div className="p-8 sm:p-12 text-center rounded-xl bg-white border border-gray-200">
+                                <Star className="w-8 h-8 sm:w-10 sm:h-10 text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500 text-xs sm:text-sm">No reviews yet</p>
                             </div>
                         ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-2 sm:space-y-3 md:space-y-4">
                                 {reviews.map((review) => (
-                                    <div key={review.id} className="p-6 rounded-lg bg-white border border-gray-200 space-y-4">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex items-center gap-4">
+                                    <div key={review.id} className="p-2.5 sm:p-3 md:p-6 rounded-lg bg-white border border-gray-200 space-y-2 sm:space-y-3">
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3">
+                                            <div className="flex items-center gap-2 sm:gap-3">
                                                 {review.reviewerPhotoURL ? (
                                                     <img
                                                         src={review.reviewerPhotoURL}
                                                         alt={review.reviewerName}
-                                                        className="h-10 w-10 rounded-full object-cover"
+                                                        className="h-8 sm:h-9 md:h-10 w-8 sm:w-9 md:w-10 rounded-full object-cover"
                                                     />
                                                 ) : (
-                                                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-semibold">
+                                                    <div className="h-8 sm:h-9 md:h-10 w-8 sm:w-9 md:w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-semibold text-xs">
                                                         {review.reviewerName?.[0]?.toUpperCase() || 'U'}
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <h3 className="font-semibold text-gray-900">{review.reviewerName}</h3>
+                                                    <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">{review.reviewerName}</h3>
                                                     <p className="text-xs text-gray-500">
                                                         {review.createdAt?.seconds
                                                             ? new Date(review.createdAt.seconds * 1000).toLocaleDateString()
@@ -398,18 +398,18 @@ export default function Profile() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-1">
+                                            <div className="flex gap-0.5">
                                                 {[...Array(5)].map((_, i) => (
                                                     <Star
                                                         key={i}
-                                                        className={`h-4 w-4 ${i < (review.rating || 0) ? 'fill-primary text-primary' : 'text-gray-300'
+                                                        className={`h-3 w-3 ${i < (review.rating || 0) ? 'fill-primary text-primary' : 'text-gray-300'
                                                             }`}
                                                     />
                                                 ))}
                                             </div>
                                         </div>
 
-                                        <p className="text-gray-700">{review.comment}</p>
+                                        <p className="text-gray-700 text-xs sm:text-sm">{review.comment}</p>
                                     </div>
                                 ))}
                             </div>
