@@ -46,6 +46,11 @@ export default function Messages() {
     // Fetch Messages for Selected Chat
     useEffect(() => {
         if (!selectedChat) return;
+
+        // Reset the listener start time when a new chat is selected
+        // This ensures we only notify for messages that arrive AFTER opening this chat
+        listenerStartTime.current = Date.now();
+
         const q = query(
             collection(db, 'chats', selectedChat.id, 'messages'),
             orderBy('createdAt', 'asc')
@@ -56,17 +61,21 @@ export default function Messages() {
 
                 // Check for new messages from other users (notifications)
                 snapshot.docChanges().forEach((change) => {
-                    if (change.type === 'added') {
+                    // Handle both 'added' (new message) and 'modified' (serverTimestamp back-fill)
+                    if (change.type === 'added' || change.type === 'modified') {
                         const msg = change.doc.data();
                         const msgId = change.doc.id;
 
+                        // Only process messages from other users that we haven't processed yet
                         if (msg.senderId !== user.uid && !processedMessageIds.has(msgId)) {
                             setProcessedMessageIds(prev => new Set([...prev, msgId]));
 
-                            // Only send notification if message was created after listener started
+                            // Only send notification if message has a timestamp and was created after listener started
                             // This prevents notifications for old messages in chat history
                             const messageTimestamp = msg.createdAt?.toMillis();
 
+                            // Only notify if we have a real timestamp from the server
+                            // and it's after we started listening to this chat
                             if (messageTimestamp && messageTimestamp > listenerStartTime.current) {
                                 const senderName = userDetails[msg.senderId]?.displayName ||
                                     selectedChat.participantNames?.[msg.senderId] ||

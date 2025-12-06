@@ -31,8 +31,28 @@ export default function Dashboard() {
 
         // Fetch My Bids (Placed by me)
         const myBidsQuery = query(collection(db, 'bids'), where('bidderId', '==', user.uid));
-        const unsubMyBids = onSnapshot(myBidsQuery, (snapshot) => {
-            setMyBids(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const unsubMyBids = onSnapshot(myBidsQuery, async (snapshot) => {
+            const bidsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Fetch post owner names for bids that are missing them
+            const bidsWithOwnerNames = await Promise.all(
+                bidsData.map(async (bid) => {
+                    if (!bid.postOwnerName && bid.postOwnerId) {
+                        try {
+                            const userQuery = query(collection(db, 'users'), where('uid', '==', bid.postOwnerId));
+                            const userSnapshot = await getDocs(userQuery);
+                            if (!userSnapshot.empty) {
+                                return { ...bid, postOwnerName: userSnapshot.docs[0].data().displayName };
+                            }
+                        } catch (error) {
+                            console.error('Error fetching post owner name:', error);
+                        }
+                    }
+                    return bid;
+                })
+            );
+
+            setMyBids(bidsWithOwnerNames);
         });
 
         // Fetch Received Bids (On my posts)

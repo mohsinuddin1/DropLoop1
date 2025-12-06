@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
-import { doc, getDoc, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot, orderBy, updateDoc, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { ArrowLeft, Plane, Package, MapPin, Calendar, Weight, MessageSquare, Share2 } from 'lucide-react';
 import BidModal from '../components/BidModal';
+import { useNotifications } from '../context/NotificationContext';
 
 export default function PostDetail() {
     const { postId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { addNotification } = useNotifications();
     const [post, setPost] = useState(null);
     const [bids, setBids] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -50,6 +52,70 @@ export default function PostDetail() {
         });
         return () => unsubscribe();
     }, [postId]);
+
+    const handleAcceptBid = async (bid) => {
+        try {
+            // 1. Update Bid Status
+            await updateDoc(doc(db, 'bids', bid.id), { status: 'accepted' });
+
+            // 2. Check if chat already exists
+            const chatsRef = collection(db, 'chats');
+            const q = query(chatsRef, where('participants', 'array-contains', user.uid));
+            const querySnapshot = await getDocs(q);
+            let chatExists = false;
+            let chatId = null;
+
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (data.participants.includes(bid.bidderId)) {
+                    chatExists = true;
+                    chatId = docSnap.id;
+                }
+            });
+
+            // 3. Create Chat if not exists
+            if (!chatExists) {
+                const newChat = await addDoc(collection(db, 'chats'), {
+                    participants: [user.uid, bid.bidderId],
+                    participantNames: {
+                        [user.uid]: user.displayName,
+                        [bid.bidderId]: bid.bidderName
+                    },
+                    lastMessage: "Bid Accepted! You can now chat.",
+                    updatedAt: serverTimestamp(),
+                    createdAt: serverTimestamp()
+                });
+                chatId = newChat.id;
+            }
+
+            // 4. Notify the bidder
+            addNotification({
+                id: `bid-accepted-${bid.id}-${Date.now()}`,
+                type: 'bid_accepted',
+                title: '🎉 Bid Accepted!',
+                message: `Your bid of ₹${bid.amount} has been accepted! You can now chat.`,
+                bidId: bid.id,
+                postId: bid.postId,
+                timestamp: new Date(),
+                read: false
+            });
+
+            // 5. Navigate to messages
+            navigate('/messages');
+        } catch (error) {
+            console.error("Error accepting bid:", error);
+            alert("Failed to accept bid");
+        }
+    };
+
+    const handleRejectBid = async (bid) => {
+        try {
+            await updateDoc(doc(db, 'bids', bid.id), { status: 'rejected' });
+        } catch (error) {
+            console.error("Error rejecting bid:", error);
+            alert("Failed to reject bid");
+        }
+    };
 
     if (loading || !post) {
         return (
@@ -268,10 +334,16 @@ export default function PostDetail() {
 
                                         {isOwner && bid.status === 'pending' && (
                                             <div className="flex gap-3 pt-4 border-t border-gray-200">
-                                                <button className="flex-1 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                                                <button
+                                                    onClick={() => handleAcceptBid(bid)}
+                                                    className="flex-1 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                                                >
                                                     Accept
                                                 </button>
-                                                <button className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                                                <button
+                                                    onClick={() => handleRejectBid(bid)}
+                                                    className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                                >
                                                     Reject
                                                 </button>
                                                 <button
