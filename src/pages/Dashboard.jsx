@@ -163,52 +163,52 @@ export default function Dashboard() {
     return (
         <div className="max-w-7xl mx-auto">
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-gray-600 mt-2">Manage your posts, bids, and deliveries</p>
+            <div className="mb-4 sm:mb-6 md:mb-8">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+                <p className="text-xs sm:text-base text-gray-600 mt-1 sm:mt-2">Manage your posts, bids, and deliveries</p>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
-                <div className="p-6 rounded-xl bg-white border border-gray-200 space-y-2">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8 md:mb-12">
+                <div className="p-2.5 sm:p-4 md:p-6 rounded-lg sm:rounded-xl bg-white border border-gray-200 space-y-1 sm:space-y-2">
                     <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-500">Active Posts</p>
-                        <Package className="h-5 w-5 text-primary" />
+                        <p className="text-xs sm:text-sm text-gray-500">Active Posts</p>
+                        <Package className="h-3.5 sm:h-4 md:h-5 w-3.5 sm:w-4 md:w-5 text-primary" />
                     </div>
-                    <p className="text-3xl font-bold text-gray-900">{activePosts}</p>
+                    <p className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">{activePosts}</p>
                 </div>
 
-                <div className="p-6 rounded-xl bg-white border border-gray-200 space-y-2">
+                <div className="p-2.5 sm:p-4 md:p-6 rounded-lg sm:rounded-xl bg-white border border-gray-200 space-y-1 sm:space-y-2">
                     <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-500">Pending Bids</p>
-                        <Clock className="h-5 w-5 text-purple-600" />
+                        <p className="text-xs sm:text-sm text-gray-500">Pending Bids</p>
+                        <Clock className="h-3.5 sm:h-4 md:h-5 w-3.5 sm:w-4 md:w-5 text-purple-600" />
                     </div>
-                    <p className="text-3xl font-bold text-gray-900">{pendingBids}</p>
+                    <p className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">{pendingBids}</p>
                 </div>
 
-                <div className="p-6 rounded-xl bg-white border border-gray-200 space-y-2">
+                <div className="p-2.5 sm:p-4 md:p-6 rounded-lg sm:rounded-xl bg-white border border-gray-200 space-y-1 sm:space-y-2">
                     <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-500">My Bids</p>
-                        <TrendingUp className="h-5 w-5 text-primary" />
+                        <p className="text-xs sm:text-sm text-gray-500">My Bids</p>
+                        <TrendingUp className="h-3.5 sm:h-4 md:h-5 w-3.5 sm:w-4 md:w-5 text-primary" />
                     </div>
-                    <p className="text-3xl font-bold text-gray-900">{myBids.length}</p>
+                    <p className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">{myBids.length}</p>
                 </div>
 
-                <div className="p-6 rounded-xl bg-white border border-gray-200 space-y-2">
+                <div className="p-2.5 sm:p-4 md:p-6 rounded-lg sm:rounded-xl bg-white border border-gray-200 space-y-1 sm:space-y-2">
                     <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-500">Completed</p>
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <p className="text-xs sm:text-sm text-gray-500">Completed</p>
+                        <CheckCircle className="h-3.5 sm:h-4 md:h-5 w-3.5 sm:w-4 md:w-5 text-green-500" />
                     </div>
-                    <p className="text-3xl font-bold text-gray-900">{completedCount}</p>
+                    <p className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">{completedCount}</p>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="space-y-6">
-                <div className="inline-flex bg-white border border-gray-200 rounded-lg p-1">
+            <div className="space-y-3 sm:space-y-4 md:space-y-6">
+                <div className="inline-flex bg-white border border-gray-200 rounded-lg p-1 w-full sm:w-auto overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('posts')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'posts'
+                        className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex-1 sm:flex-none ${activeTab === 'posts'
                             ? 'bg-primary text-white'
                             : 'text-gray-700 hover:text-gray-900'
                             }`}
@@ -217,7 +217,7 @@ export default function Dashboard() {
                     </button>
                     <button
                         onClick={() => setActiveTab('received')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'received'
+                        className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex-1 sm:flex-none whitespace-nowrap ${activeTab === 'received'
                             ? 'bg-primary text-white'
                             : 'text-gray-700 hover:text-gray-900'
                             }`}
@@ -226,7 +226,7 @@ export default function Dashboard() {
                     </button>
                     <button
                         onClick={() => setActiveTab('bids')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'bids'
+                        className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-colors flex-1 sm:flex-none whitespace-nowrap ${activeTab === 'bids'
                             ? 'bg-primary text-white'
                             : 'text-gray-700 hover:text-gray-900'
                             }`}
@@ -237,40 +237,40 @@ export default function Dashboard() {
 
                 {/* My Posts Tab */}
                 {activeTab === 'posts' && (
-                    <div className="space-y-4">
+                    <div className="space-y-2 sm:space-y-3 md:space-y-4">
                         {myPosts.length === 0 ? (
-                            <div className="p-12 text-center rounded-xl bg-white border border-gray-200">
-                                <p className="text-gray-500">You haven't created any posts yet.</p>
+                            <div className="p-6 sm:p-8 md:p-12 text-center rounded-lg sm:rounded-xl bg-white border border-gray-200">
+                                <p className="text-gray-500 text-xs sm:text-sm">You haven't created any posts yet.</p>
                             </div>
                         ) : (
                             myPosts.map(post => {
                                 const postBids = receivedBids.filter(b => b.postId === post.id);
                                 return (
-                                    <div key={post.id} className="p-6 rounded-xl bg-white border border-gray-200">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="space-y-2">
-                                                <h3 className="font-semibold text-lg text-gray-900">
+                                    <div key={post.id} className="p-2.5 sm:p-4 md:p-6 rounded-lg sm:rounded-xl bg-white border border-gray-200">
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-2 sm:mb-3 md:mb-4">
+                                            <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
+                                                <h3 className="font-semibold text-xs sm:text-base md:text-lg text-gray-900">
                                                     {post.type === 'travel' ? `Travel to ${post.to}` : post.itemName} - {post.from} to {post.to}
                                                 </h3>
-                                                <p className="text-sm text-gray-500">
+                                                <p className="text-xs text-gray-500">
                                                     Posted {post.createdAt?.seconds ? format(new Date(post.createdAt.seconds * 1000), 'yyyy-MM-dd') : 'Just now'}
                                                 </p>
                                             </div>
-                                            <span className={`px-3 py-1 rounded-lg text-sm font-medium ${post.status === 'open' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
+                                            <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs font-medium w-fit ${post.status === 'open' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
                                                 }`}>
                                                 {post.status === 'open' ? 'Open' : 'Closed'}
                                             </span>
                                         </div>
 
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-center">
-                                                <p className="text-2xl font-bold text-primary">{postBids.length}</p>
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                                            <div className="text-center sm:text-left">
+                                                <p className="text-lg sm:text-xl md:text-2xl font-bold text-primary">{postBids.length}</p>
                                                 <p className="text-xs text-gray-500">Offers</p>
                                             </div>
 
                                             <button
                                                 onClick={() => navigate(`/posts/${post.id}`)}
-                                                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                                className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
                                             >
                                                 View Details
                                             </button>
@@ -284,20 +284,20 @@ export default function Dashboard() {
 
                 {/* Received Bids Tab */}
                 {activeTab === 'received' && (
-                    <div className="space-y-4">
+                    <div className="space-y-2 sm:space-y-3 md:space-y-4">
                         {receivedBids.length === 0 ? (
-                            <div className="p-12 text-center rounded-xl bg-white border border-gray-200">
-                                <p className="text-gray-500">No bids received yet.</p>
+                            <div className="p-6 sm:p-8 md:p-12 text-center rounded-lg sm:rounded-xl bg-white border border-gray-200">
+                                <p className="text-gray-500 text-xs sm:text-sm">No bids received yet.</p>
                             </div>
                         ) : (
                             receivedBids.map(bid => (
-                                <div key={bid.id} className="p-6 rounded-xl bg-white border border-gray-200">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="space-y-1">
-                                            <h3 className="font-semibold text-gray-900">{bid.postTitle || 'Post'}</h3>
-                                            <p className="text-sm text-gray-500">From {bid.bidderName}</p>
+                                <div key={bid.id} className="p-2.5 sm:p-4 md:p-6 rounded-lg sm:rounded-xl bg-white border border-gray-200">
+                                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2 sm:mb-3 md:mb-4">
+                                        <div className="space-y-0.5 sm:space-y-1">
+                                            <h3 className="font-semibold text-xs sm:text-base text-gray-900">{bid.postTitle || 'Post'}</h3>
+                                            <p className="text-xs text-gray-500">From {bid.bidderName}</p>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-lg text-sm font-medium ${bid.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
+                                        <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs font-medium w-fit ${bid.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
                                             bid.status === 'accepted' ? 'bg-green-100 text-green-600' :
                                                 'bg-red-100 text-red-600'
                                             }`}>
@@ -306,22 +306,22 @@ export default function Dashboard() {
                                     </div>
 
                                     {bid.message && (
-                                        <p className="text-gray-700 mb-4">{bid.message}</p>
+                                        <p className="text-xs sm:text-sm text-gray-700 mb-2 sm:mb-3 md:mb-4">{bid.message}</p>
                                     )}
 
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-xl font-bold text-primary">₹{bid.amount}</p>
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <p className="text-base sm:text-lg md:text-xl font-bold text-primary">₹{bid.amount}</p>
                                         {bid.status === 'pending' && (
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto">
                                                 <button
                                                     onClick={() => handleAcceptBid(bid)}
-                                                    className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                                                    className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm"
                                                 >
                                                     Accept
                                                 </button>
                                                 <button
                                                     onClick={() => handleRejectBid(bid)}
-                                                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                                    className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
                                                 >
                                                     Reject
                                                 </button>
@@ -333,7 +333,7 @@ export default function Dashboard() {
                                                     setSelectedBidForReview(bid);
                                                     setIsReviewModalOpen(true);
                                                 }}
-                                                className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                                                className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm"
                                             >
                                                 Review User
                                             </button>
@@ -347,22 +347,22 @@ export default function Dashboard() {
 
                 {/* My Active Bids Tab */}
                 {activeTab === 'bids' && (
-                    <div className="space-y-4">
+                    <div className="space-y-2 sm:space-y-3 md:space-y-4">
                         {myBids.length === 0 ? (
-                            <div className="p-12 text-center rounded-xl bg-white border border-gray-200">
-                                <p className="text-gray-500">You haven't placed any bids yet.</p>
+                            <div className="p-6 sm:p-8 md:p-12 text-center rounded-lg sm:rounded-xl bg-white border border-gray-200">
+                                <p className="text-gray-500 text-xs sm:text-sm">You haven't placed any bids yet.</p>
                             </div>
                         ) : (
                             myBids.map(bid => (
-                                <div key={bid.id} className="p-6 rounded-xl bg-white border border-gray-200">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="space-y-1">
-                                            <h3 className="font-semibold text-gray-900">{bid.postTitle || 'Post'}</h3>
-                                            <p className="text-sm text-gray-500">
+                                <div key={bid.id} className="p-2.5 sm:p-4 md:p-6 rounded-lg sm:rounded-xl bg-white border border-gray-200">
+                                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2 sm:mb-3 md:mb-4">
+                                        <div className="space-y-0.5 sm:space-y-1">
+                                            <h3 className="font-semibold text-xs sm:text-base text-gray-900">{bid.postTitle || 'Post'}</h3>
+                                            <p className="text-xs text-gray-500">
                                                 Posted by {bid.postOwnerName || 'User'} • {bid.createdAt?.seconds ? format(new Date(bid.createdAt.seconds * 1000), 'yyyy-MM-dd') : 'Just now'}
                                             </p>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-lg text-sm font-medium ${bid.status === 'accepted' ? 'bg-green-100 text-green-600' :
+                                        <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs font-medium w-fit ${bid.status === 'accepted' ? 'bg-green-100 text-green-600' :
                                             bid.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
                                                 'bg-red-100 text-red-600'
                                             }`}>
@@ -370,22 +370,23 @@ export default function Dashboard() {
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-xl font-bold text-primary">₹{bid.amount}</p>
-                                        <div className="flex gap-2">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <p className="text-base sm:text-lg md:text-xl font-bold text-primary">₹{bid.amount}</p>
+                                        <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto">
                                             <button
                                                 onClick={() => navigate(`/posts/${bid.postId}`)}
-                                                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                                className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
                                             >
                                                 View Post
                                             </button>
                                             {bid.status === 'accepted' && (
                                                 <button
                                                     onClick={() => navigate(`/messages?userId=${bid.postOwnerId}`)}
-                                                    className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm flex items-center gap-2"
+                                                    className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2"
                                                 >
-                                                    <MessageSquare className="h-4 w-4" />
-                                                    Start Chat
+                                                    <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+                                                    <span className="hidden sm:inline">Start Chat</span>
+                                                    <span className="sm:hidden">Chat</span>
                                                 </button>
                                             )}
                                         </div>
