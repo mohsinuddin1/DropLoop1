@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Star, Edit2, MapPin, Briefcase, BookOpen, MessageSquare, Award, Mail } from 'lucide-react';
+import { Star, Edit2, MapPin, Briefcase, BookOpen, MessageSquare, Award, Linkedin } from 'lucide-react';
 import ReviewCard from '../components/ReviewCard';
 import { uploadImage } from '../utils/uploadImage';
 
@@ -16,7 +16,7 @@ export default function Profile() {
     const [userProfile, setUserProfile] = useState(null);
     const [profileUser, setProfileUser] = useState(null); // The user whose profile we're viewing
     const [isEditing, setIsEditing] = useState(false);
-    const [editForm, setEditForm] = useState({ profession: '', education: '', hometown: '', bio: '' });
+    const [editForm, setEditForm] = useState({ profession: '', education: '', hometown: '', bio: '', linkedinUrl: '' });
     const [uploading, setUploading] = useState(false);
     const [completedDeliveries, setCompletedDeliveries] = useState(0);
 
@@ -48,7 +48,8 @@ export default function Profile() {
                         profession: userData.profession || '',
                         education: userData.education || '',
                         hometown: userData.hometown || '',
-                        bio: userData.bio || ''
+                        bio: userData.bio || '',
+                        linkedinUrl: userData.linkedinUrl || ''
                     });
                 }
             } catch (error) {
@@ -350,13 +351,34 @@ export default function Profile() {
                                 )}
                             </div>
 
-                            {/* Email */}
+                            {/* LinkedIn URL */}
                             <div className="p-2.5 sm:p-3 md:p-4 rounded-lg bg-white border border-gray-200 space-y-1 sm:space-y-2">
                                 <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <Mail className="h-3 w-3" />
-                                    Email
+                                    <Linkedin className="h-3 w-3" />
+                                    LinkedIn Profile
                                 </div>
-                                <p className="font-semibold text-gray-900 text-xs sm:text-sm">{profileUser.email}</p>
+                                {isEditing ? (
+                                    <input
+                                        type="url"
+                                        value={editForm.linkedinUrl}
+                                        onChange={(e) => handleInputChange(e, 'linkedinUrl')}
+                                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-xs"
+                                        placeholder="https://linkedin.com/in/yourprofile"
+                                    />
+                                ) : (
+                                    userProfile?.linkedinUrl ? (
+                                        <a
+                                            href={userProfile.linkedinUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-semibold text-primary hover:text-indigo-700 text-xs sm:text-sm break-all underline"
+                                        >
+                                            View LinkedIn Profile
+                                        </a>
+                                    ) : (
+                                        <p className="font-semibold text-gray-900 text-xs sm:text-sm">Not specified</p>
+                                    )
+                                )}
                             </div>
                         </div>
                     </div>

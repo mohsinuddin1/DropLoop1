@@ -7,7 +7,8 @@ import {
     signOut,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
-    updateProfile
+    updateProfile,
+    sendEmailVerification
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
@@ -64,10 +65,13 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const signupWithEmail = async (email, password, name) => {
+    const signupWithEmail = async (email, password, name, phoneNumber) => {
         try {
             const result = await createUserWithEmailAndPassword(auth, email, password);
             const user = result.user;
+
+            // Send email verification
+            await sendEmailVerification(user);
 
             await updateProfile(user, { displayName: name });
 
@@ -76,6 +80,7 @@ export const AuthProvider = ({ children }) => {
                     uid: user.uid,
                     displayName: name,
                     email: email,
+                    phoneNumber: phoneNumber || null,
                     photoURL: null,
                     createdAt: new Date().toISOString()
                 });
@@ -90,8 +95,17 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const loginWithEmail = (email, password) => {
-        return signInWithEmailAndPassword(auth, email, password);
+    const loginWithEmail = async (email, password) => {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+
+        // Check if email is verified
+        if (!result.user.emailVerified) {
+            // Sign out the user immediately
+            await signOut(auth);
+            throw new Error('Please verify your email before logging in. Check your inbox for the verification email.');
+        }
+
+        return result;
     };
 
     const logout = () => {

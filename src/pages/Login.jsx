@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock } from 'lucide-react';
+import { auth } from '../firebase/config';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showResendVerification, setShowResendVerification] = useState(false);
+    const [resendSuccess, setResendSuccess] = useState(false);
     const { loginWithEmail, loginWithGoogle } = useAuth();
     const navigate = useNavigate();
 
@@ -15,11 +19,39 @@ export default function Login() {
         e.preventDefault();
         try {
             setError('');
+            setShowResendVerification(false);
+            setResendSuccess(false);
             setLoading(true);
             await loginWithEmail(email, password);
             navigate('/dashboard');
         } catch (err) {
-            setError('Failed to log in: ' + err.message);
+            const errorMessage = err.message || 'Failed to log in';
+            setError(errorMessage);
+
+            // Check if the error is about unverified email
+            if (errorMessage.includes('verify your email')) {
+                setShowResendVerification(true);
+            }
+        }
+        setLoading(false);
+    };
+
+    const handleResendVerification = async () => {
+        try {
+            setLoading(true);
+            setError('');
+
+            // Sign in temporarily to send verification
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            await sendEmailVerification(userCredential.user);
+
+            // Sign them out immediately
+            await auth.signOut();
+
+            setResendSuccess(true);
+            setShowResendVerification(false);
+        } catch (err) {
+            setError('Failed to resend verification email: ' + err.message);
         }
         setLoading(false);
     };
@@ -49,7 +81,27 @@ export default function Login() {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                     {error && (
                         <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                            {error}
+                            <div className="flex items-start gap-2">
+                                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                    <p>{error}</p>
+                                    {showResendVerification && (
+                                        <button
+                                            onClick={handleResendVerification}
+                                            disabled={loading}
+                                            className="mt-3 text-sm font-medium text-red-900 hover:text-red-700 underline disabled:opacity-50"
+                                        >
+                                            Resend verification email
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {resendSuccess && (
+                        <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                            Verification email sent! Please check your inbox and click the verification link, then try logging in again.
                         </div>
                     )}
 
