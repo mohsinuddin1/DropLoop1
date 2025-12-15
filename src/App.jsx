@@ -20,6 +20,7 @@ const CreatePost = lazy(() => import('./pages/CreatePost'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Profile = lazy(() => import('./pages/Profile'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
 function App() {
   return (
@@ -64,6 +65,12 @@ function App() {
                     <Route path="profile/:userId" element={
                       <ProtectedRoute>
                         <Profile />
+                      </ProtectedRoute>
+                    } />
+
+                    <Route path="admin" element={
+                      <ProtectedRoute>
+                        <AdminDashboard />
                       </ProtectedRoute>
                     } />
                   </Route>

@@ -11,31 +11,42 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'mohsinuddin64@gmail.com';
+    }
+
     // Users collection: 
     // - Anyone can read (needed for profiles)
     // - User can write their own profile
+    // - Admin can ban/unban users and delete any user
     match /users/{userId} {
       allow read: if true;
-      allow write: if isOwner(userId);
+      allow write: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Posts collection:
     // - Anyone can read (including list queries)
     // - Authenticated users can create
     // - Only owner can update/delete
+    // - Admin can delete any post
     match /posts/{postId} {
       allow read: if true; // Allows both get and list operations
       allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
     // Bids collection:
     // - Authenticated users can read/create
     // - Only involved parties (bidder or post owner) should ideally read, but for simplicity:
+    // - Admin can delete any bid
     match /bids/{bidId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated(); // Needed for accepting/rejecting
+      allow delete: if isAdmin(); // Admin can delete bids when deleting posts
     }
 
     // Reviews collection:
@@ -45,6 +56,17 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAuthenticated();
       allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.reviewerId;
+    }
+
+    // Notifications collection:
+    // - Users can read their own notifications
+    // - Authenticated users can create notifications (for sending to others)
+    // - Users can update their own notifications (marking as read)
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
     // Chats collection:
@@ -58,6 +80,13 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read, write: if isAuthenticated();
       }
+    }
+
+    // Deleted Posts collection (Admin Dashboard):
+    // - Only admin can read/write
+    // - Stores archived deleted posts with full audit trail
+    match /deletedPosts/{deletedPostId} {
+      allow read, write: if isAdmin();
     }
   }
 }
