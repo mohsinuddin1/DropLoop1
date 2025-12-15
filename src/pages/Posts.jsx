@@ -80,7 +80,7 @@ export default function Posts() {
                         <p className="text-gray-600">Find items to deliver or travelers on your route</p>
                     </div>
                     <button
-                        onClick={() => navigate('/create-post')}
+                        onClick={() => navigate('/create')}
                         className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

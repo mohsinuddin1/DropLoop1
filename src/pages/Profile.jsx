@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Star, Edit2, MapPin, Briefcase, BookOpen, MessageSquare, Award, Linkedin } from 'lucide-react';
+import { Star, Edit2, MapPin, Briefcase, BookOpen, MessageSquare, Award, Linkedin, Shield } from 'lucide-react';
 import ReviewCard from '../components/ReviewCard';
 import { uploadImage } from '../utils/uploadImage';
+import IDUpload from '../components/IDUpload';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 export default function Profile() {
     const { userId } = useParams(); // Get userId from URL if viewing someone else's profile
@@ -19,6 +21,8 @@ export default function Profile() {
     const [editForm, setEditForm] = useState({ profession: '', education: '', hometown: '', bio: '', linkedinUrl: '' });
     const [uploading, setUploading] = useState(false);
     const [completedDeliveries, setCompletedDeliveries] = useState(0);
+    const [showIDModal, setShowIDModal] = useState(false);
+    const [idVerification, setIdVerification] = useState(null);
 
     // Determine whose profile we're viewing
     const targetUserId = userId || user?.uid;
@@ -44,6 +48,7 @@ export default function Profile() {
                         ...userData
                     });
                     setUserProfile(userData);
+                    setIdVerification(userData.idVerification || null);
                     setEditForm({
                         profession: userData.profession || '',
                         education: userData.education || '',
@@ -157,6 +162,22 @@ export default function Profile() {
         });
     };
 
+    const handleIDUpload = async (idData) => {
+        if (!user || !isOwnProfile) return;
+        try {
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, {
+                idVerification: idData
+            });
+            setIdVerification(idData);
+            setShowIDModal(false);
+            alert('ID submitted successfully! It will be reviewed by our admin team.');
+        } catch (err) {
+            console.error('Error saving ID verification:', err);
+            alert('Failed to submit ID. Please try again.');
+        }
+    };
+
     // Calculate average rating
     const averageRating = reviews.length > 0
         ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
@@ -206,7 +227,12 @@ export default function Profile() {
                                         className="text-xl sm:text-2xl md:text-4xl font-bold bg-white border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-gray-900 w-full"
                                     />
                                 ) : (
-                                    <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-gray-900">{profileUser.displayName}</h1>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-gray-900">{profileUser.displayName}</h1>
+                                        {idVerification?.status === 'approved' && (
+                                            <VerifiedBadge variant="compact" size="lg" />
+                                        )}
+                                    </div>
                                 )}
 
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-2 md:gap-4 flex-wrap">
@@ -439,11 +465,102 @@ export default function Profile() {
                     </div>
                 </div>
 
-                {/* Sidebar - Empty for now, can add stats later */}
+                {/* Sidebar - ID Verification */}
                 <div className="space-y-4">
-                    {/* Future: Add activity stats, badges, etc. */}
+                    {/* ID Verification Card */}
+                    {isOwnProfile && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <Shield className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">ID Verification</h3>
+                                    <p className="text-xs text-gray-600">Get verified</p>
+                                </div>
+                            </div>
+
+                            {idVerification ? (
+                                <div className="space-y-3">
+                                    {idVerification.status === 'approved' && (
+                                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                            <VerifiedBadge size="md" />
+                                        </div>
+                                    )}
+                                    {idVerification.status === 'pending' && (
+                                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                            <p className="text-sm font-medium text-yellow-900">Under Review</p>
+                                            <p className="text-xs text-yellow-700 mt-1">Your ID is being verified</p>
+                                        </div>
+                                    )}
+                                    {idVerification.status === 'rejected' && (
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                            <p className="text-sm font-medium text-red-900">Verification Failed</p>
+                                            <p className="text-xs text-red-700 mt-1">Please resubmit</p>
+                                        </div>
+                                    )}
+                                    {idVerification.status !== 'approved' && (
+                                        <button
+                                            onClick={() => setShowIDModal(true)}
+                                            className="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                                        >
+                                            {idVerification.status === 'rejected' ? 'Resubmit ID' : 'View Status'}
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setShowIDModal(true)}
+                                    className="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm flex items-center justify-center gap-2"
+                                >
+                                    <Shield className="h-4 w-4" />
+                                    <span>Verify Your ID</span>
+                                </button>
+                            )}
+
+                            <p className="text-xs text-gray-500">
+                                Get a verified badge on your profile to build trust
+                            </p>
+                        </div>
+                    )}
+
+                    {/* If viewing someone else's profile, show their verification status */}
+                    {!isOwnProfile && idVerification?.status === 'approved' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-green-100 rounded-lg">
+                                    <Shield className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <VerifiedBadge size="md" />
+                                    <p className="text-xs text-gray-600 mt-1">Verified User</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* ID Upload Modal */}
+            {showIDModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-gray-900">ID Verification</h2>
+                            <button
+                                onClick={() => setShowIDModal(false)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <span className="text-gray-500 text-2xl">&times;</span>
+                            </button>
+                        </div>
+                        <IDUpload
+                            onUploadComplete={handleIDUpload}
+                            existingID={idVerification}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

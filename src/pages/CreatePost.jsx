@@ -5,6 +5,7 @@ import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Plane, Package, Calendar, MapPin, Weight, Clock, Image as ImageIcon, Loader } from 'lucide-react';
 import { uploadImage } from '../utils/uploadImage';
+import LocationAutocomplete from '../components/LocationAutocomplete';
 
 export default function CreatePost() {
     const { user } = useAuth();
@@ -13,9 +14,9 @@ export default function CreatePost() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Common fields
-    const [from, setFrom] = useState('');
-    const [to, setTo] = useState('');
+    // Common fields - Location objects with city, state, stateCode
+    const [fromLocation, setFromLocation] = useState(null);
+    const [toLocation, setToLocation] = useState(null);
     const [departureDate, setDepartureDate] = useState('');
     const [arrivalDate, setArrivalDate] = useState('');
 
@@ -34,11 +35,26 @@ export default function CreatePost() {
         setLoading(true);
         setError('');
 
+        // Validate locations
+        if (!fromLocation || !toLocation) {
+            setError('Please select both from and to locations');
+            setLoading(false);
+            return;
+        }
+
         try {
             const postData = {
                 type: postType,
-                from,
-                to,
+                from: {
+                    city: fromLocation.city,
+                    state: fromLocation.state,
+                    stateCode: fromLocation.stateCode
+                },
+                to: {
+                    city: toLocation.city,
+                    state: toLocation.state,
+                    stateCode: toLocation.stateCode
+                },
                 departureDate,
                 arrivalDate,
                 userId: user.uid,
@@ -126,35 +142,21 @@ export default function CreatePost() {
                 <div className="space-y-4">
                     <h2 className="text-xl font-semibold text-gray-900">Route Details</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">From</label>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="Departure city"
-                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                                    value={from}
-                                    onChange={(e) => setFrom(e.target.value)}
-                                />
-                            </div>
-                        </div>
+                        <LocationAutocomplete
+                            value={fromLocation}
+                            onChange={setFromLocation}
+                            label={postType === 'travel' ? 'From (Departure City)' : 'From (Pickup City)'}
+                            placeholder="e.g., Mumbai, Delhi, Bangalore"
+                            required
+                        />
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">To</label>
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="Destination city"
-                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                                    value={to}
-                                    onChange={(e) => setTo(e.target.value)}
-                                />
-                            </div>
-                        </div>
+                        <LocationAutocomplete
+                            value={toLocation}
+                            onChange={setToLocation}
+                            label={postType === 'travel' ? 'To (Arrival City)' : 'To (Delivery City)'}
+                            placeholder="e.g., Mumbai, Delhi, Bangalore"
+                            required
+                        />
                     </div>
                 </div>
 

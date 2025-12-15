@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
+import FirstTimeIDVerificationModal from './FirstTimeIDVerificationModal';
 
 export default function Layout() {
     const location = useLocation();
@@ -16,6 +17,10 @@ export default function Layout() {
                     &copy; {new Date().getFullYear()} DropLoop. All rights reserved.
                 </div>
             </footer>
+
+            {/* First-time ID Verification Modal */}
+            <FirstTimeIDVerificationModal />
+
             {/* Umami Analytics - global */}
             <script defer src="https://cloud.umami.is/script.js" data-website-id="bbe412dc-3619-4d48-8553-a71aff81d043"></script>
         </div>

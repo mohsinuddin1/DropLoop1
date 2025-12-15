@@ -20,9 +20,14 @@ service cloud.firestore {
     // - Anyone can read (needed for profiles)
     // - User can write their own profile
     // - Admin can ban/unban users and delete any user
+    // - SECURITY: Only admin can modify idVerification status
     match /users/{userId} {
       allow read: if true;
-      allow write: if isOwner(userId) || isAdmin();
+      // Users can write their own profile, but NOT modify idVerification status
+      allow write: if isOwner(userId) 
+                   && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['idVerification.status', 'idVerification.approvedAt', 'idVerification.approvedBy', 'idVerification.rejectedAt', 'idVerification.rejectedBy']));
+      // Admin can do anything
+      allow write: if isAdmin();
       allow delete: if isAdmin();
     }
 

@@ -5,11 +5,13 @@ import { collection, query, orderBy, onSnapshot, doc, getDocs, where, writeBatch
 import {
     Trash2, AlertCircle, Package, Plane, Users, Shield, Search, Filter, Archive,
     RotateCcw, Eye, Trash, UserX, Ban, TrendingUp, BarChart3, Flag,
-    CheckCircle, XCircle, Edit, Star, MessageSquare, DollarSign, Calendar
+    CheckCircle, XCircle, Edit, Star, MessageSquare, DollarSign, Calendar, CheckCircle2, MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { IDVerificationTab } from '../components/IDVerificationTab';
+import { ManualCitiesTab } from '../components/ManualCitiesTab';
 
-const ADMIN_EMAIL = 'mohsinuddin64@gmail.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'mohsinuddin64@gmail.com';
 
 // Tabs configuration
 const TABS = {
@@ -17,7 +19,9 @@ const TABS = {
     USERS: 'users',
     BIDS: 'bids',
     ANALYTICS: 'analytics',
-    REPORTS: 'reports'
+    REPORTS: 'reports',
+    ID_VERIFICATION: 'id_verification',
+    MANUAL_CITIES: 'manual_cities'
 };
 
 export default function AdminDashboard() {
@@ -62,7 +66,8 @@ export default function AdminDashboard() {
         travelPosts: 0,
         itemPosts: 0,
         activeUsers7Days: 0,
-        totalRevenue: 0
+        totalRevenue: 0,
+        pendingVerifications: 0
     });
 
     // Check if user is admin
@@ -146,7 +151,8 @@ export default function AdminDashboard() {
                 if (!u.lastActive) return false;
                 const lastActive = u.lastActive.toDate ? u.lastActive.toDate() : new Date(u.lastActive);
                 return lastActive >= sevenDaysAgo;
-            }).length
+            }).length,
+            pendingVerifications: usersData.filter(u => u.idVerification?.status === 'pending').length
         }));
     };
 
@@ -295,6 +301,40 @@ export default function AdminDashboard() {
         }
     };
 
+    // --- ID VERIFICATION FUNCTIONS ---
+
+    const handleApproveID = async (userId) => {
+        if (!confirm('Approve this ID verification?')) return;
+
+        try {
+            await updateDoc(doc(db, 'users', userId), {
+                'idVerification.status': 'approved',
+                'idVerification.approvedAt': serverTimestamp(),
+                'idVerification.approvedBy': user.email
+            });
+        } catch (error) {
+            console.error('Error approving ID:', error);
+            alert('Failed to approve ID verification.');
+        }
+    };
+
+    const handleRejectID = async (userId) => {
+        const reason = prompt('Enter reason for rejection:');
+        if (!reason) return;
+
+        try {
+            await updateDoc(doc(db, 'users', userId), {
+                'idVerification.status': 'rejected',
+                'idVerification.rejectedAt': serverTimestamp(),
+                'idVerification.rejectedBy': user.email,
+                'idVerification.rejectionReason': reason
+            });
+        } catch (error) {
+            console.error('Error rejecting ID:', error);
+            alert('Failed to reject ID verification.');
+        }
+    };
+
     // Filter functions
     const filteredPosts = posts.filter(post => {
         const matchesSearch = !searchTerm ||
@@ -377,6 +417,19 @@ export default function AdminDashboard() {
                         active={activeTab === TABS.REPORTS}
                         onClick={() => setActiveTab(TABS.REPORTS)}
                     />
+                    <Tab
+                        icon={Shield}
+                        label="ID Verification"
+                        count={stats.pendingVerifications}
+                        active={activeTab === TABS.ID_VERIFICATION}
+                        onClick={() => setActiveTab(TABS.ID_VERIFICATION)}
+                    />
+                    <Tab
+                        icon={MapPin}
+                        label="Manual Cities"
+                        active={activeTab === TABS.MANUAL_CITIES}
+                        onClick={() => setActiveTab(TABS.MANUAL_CITIES)}
+                    />
                 </div>
             </div>
 
@@ -439,6 +492,19 @@ export default function AdminDashboard() {
                 <ReportsManagement reports={reports} loading={loading} />
             )}
 
+            {activeTab === TABS.ID_VERIFICATION && (
+                <IDVerificationTab
+                    users={users}
+                    onApprove={handleApproveID}
+                    onReject={handleRejectID}
+                    loading={loading}
+                />
+            )}
+
+            {activeTab === TABS.MANUAL_CITIES && (
+                <ManualCitiesTab loading={loading} />
+            )}
+
             {/* Delete Modal */}
             {showDeleteModal && (
                 <DeleteModal
@@ -488,8 +554,8 @@ function Tab({ icon: Icon, label, count, active, onClick }) {
         <button
             onClick={onClick}
             className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap ${active
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
         >
             <Icon className="h-5 w-5" />
