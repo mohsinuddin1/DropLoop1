@@ -6,6 +6,19 @@ export default function PostCard({ post, onBid }) {
     const navigate = useNavigate();
     const isTravel = post.type === 'travel';
 
+    // Helper function to safely format location (handles both string and object values)
+    const formatLocation = (location, short = false) => {
+        if (!location) return '';
+        if (typeof location === 'string') {
+            return short ? location.split(',')[0] : location;
+        }
+        if (typeof location === 'object') {
+            if (short) return location.city || location.name || '';
+            return location.city ? `${location.city}, ${location.state || ''}`.trim() : (location.name || '');
+        }
+        return String(location);
+    };
+
     // Backward compatibility: handle old posts with 'date' field
     const departureDate = post.departureDate || post.date;
     const arrivalDate = post.arrivalDate || post.date;
@@ -95,9 +108,9 @@ export default function PostCard({ post, onBid }) {
 
                             {/* Location - From → To */}
                             <div className="flex items-center gap-1 text-[10px] text-gray-600 min-w-0">
-                                <span className="truncate">{post.from.split(',')[0]}</span>
+                                <span className="truncate">{formatLocation(post.from, true)}</span>
                                 <ArrowRight className="h-2 w-2 flex-shrink-0" />
-                                <span className="truncate">{post.to.split(',')[0]}</span>
+                                <span className="truncate">{formatLocation(post.to, true)}</span>
                             </div>
 
                             {/* Dates */}
@@ -220,14 +233,14 @@ export default function PostCard({ post, onBid }) {
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span className="text-sm text-gray-900 font-medium">{post.from}</span>
+                            <span className="text-sm text-gray-900 font-medium">{formatLocation(post.from)}</span>
                         </div>
                         <div className="flex items-center justify-center">
                             <ArrowRight className="h-3 w-3 text-gray-400" />
                         </div>
                         <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-purple-600 flex-shrink-0" />
-                            <span className="text-sm text-gray-900 font-medium">{post.to}</span>
+                            <span className="text-sm text-gray-900 font-medium">{formatLocation(post.to)}</span>
                         </div>
                     </div>
 

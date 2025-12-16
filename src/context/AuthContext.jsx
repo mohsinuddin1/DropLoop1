@@ -40,27 +40,25 @@ export const AuthProvider = ({ children }) => {
             const user = result.user;
 
             // Check if user exists in Firestore, if not create
-            try {
-                const userRef = doc(db, "users", user.uid);
-                const userSnap = await getDoc(userRef);
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
 
-                if (!userSnap.exists()) {
-                    await setDoc(userRef, {
-                        uid: user.uid,
-                        displayName: user.displayName,
-                        email: user.email,
-                        photoURL: user.photoURL,
-                        createdAt: new Date().toISOString()
-                    });
-                }
-            } catch (firestoreError) {
-                console.error("Firestore Error during login (proceeding anyway):", firestoreError);
-                // We don't throw here, so login can succeed even if DB is unreachable
+            if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                    uid: user.uid,
+                    displayName: user.displayName,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    createdAt: new Date().toISOString()
+                });
             }
 
             return user;
         } catch (error) {
             console.error("Google Sign In Error", error);
+            if (error.code === 'permission-denied') {
+                throw new Error('Failed to create user profile. Please contact support if this persists.');
+            }
             throw error;
         }
     };
@@ -73,24 +71,26 @@ export const AuthProvider = ({ children }) => {
             // Send email verification
             await sendEmailVerification(user);
 
+            // Update display name
             await updateProfile(user, { displayName: name });
 
-            try {
-                await setDoc(doc(db, "users", user.uid), {
-                    uid: user.uid,
-                    displayName: name,
-                    email: email,
-                    phoneNumber: phoneNumber || null,
-                    photoURL: null,
-                    createdAt: new Date().toISOString()
-                });
-            } catch (firestoreError) {
-                console.error("Firestore Error during signup (proceeding anyway):", firestoreError);
-            }
+            // Create user document in Firestore
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                displayName: name,
+                email: email,
+                phoneNumber: phoneNumber || null,
+                photoURL: null,
+                createdAt: new Date().toISOString()
+            });
 
             return user;
         } catch (error) {
             console.error("Signup Error", error);
+            // Provide more helpful error messages
+            if (error.code === 'permission-denied') {
+                throw new Error('Failed to create user profile. Please contact support if this persists.');
+            }
             throw error;
         }
     };

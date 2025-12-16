@@ -23,6 +23,8 @@ service cloud.firestore {
     // - SECURITY: Only admin can modify idVerification status
     match /users/{userId} {
       allow read: if true;
+      // NEW: Allow users to create their own profile (needed for signup)
+      allow create: if isOwner(userId);
       // Users can write their own profile, but NOT modify idVerification status
       allow write: if isOwner(userId) 
                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['idVerification.status', 'idVerification.approvedAt', 'idVerification.approvedBy', 'idVerification.rejectedAt', 'idVerification.rejectedBy']));

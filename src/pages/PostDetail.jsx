@@ -154,6 +154,19 @@ export default function PostDetail() {
     const isTravel = post.type === 'travel';
     const isOwner = user?.uid === post.userId;
 
+    // Helper function to safely format location (handles both string and object values)
+    const formatLocation = (location, short = false) => {
+        if (!location) return '';
+        if (typeof location === 'string') {
+            return short ? location.split(',')[0] : location;
+        }
+        if (typeof location === 'object') {
+            if (short) return location.city || location.name || '';
+            return location.city ? `${location.city}, ${location.state || ''}`.trim() : (location.name || '');
+        }
+        return String(location);
+    };
+
     // Backward compatibility: handle old posts with 'date' field
     const departureDate = post.departureDate || post.date;
     const arrivalDate = post.arrivalDate || post.date;
@@ -232,11 +245,11 @@ export default function PostDetail() {
     const handleShare = async () => {
         const shareUrl = window.location.href;
         const shareTitle = isTravel
-            ? `Travel to ${post.to}`
-            : `${post.itemName} - ${post.from} to ${post.to}`;
+            ? `Travel to ${formatLocation(post.to)}`
+            : `${post.itemName} - ${formatLocation(post.from)} to ${formatLocation(post.to)}`;
         const shareText = isTravel
-            ? `Check out this travel opportunity from ${post.from} to ${post.to} on DropLoop!`
-            : `Check out this item delivery: ${post.itemName} (${post.itemWeight}kg) from ${post.from} to ${post.to} on DropLoop!`;
+            ? `Check out this travel opportunity from ${formatLocation(post.from)} to ${formatLocation(post.to)} on DropLoop!`
+            : `Check out this item delivery: ${post.itemName} (${post.itemWeight}kg) from ${formatLocation(post.from)} to ${formatLocation(post.to)} on DropLoop!`;
 
         try {
             // Try Web Share API first (mobile devices)
@@ -409,7 +422,7 @@ export default function PostDetail() {
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-5 w-5 text-primary" />
-                                    <p className="font-semibold text-lg text-gray-900">{post.from}</p>
+                                    <p className="font-semibold text-lg text-gray-900">{formatLocation(post.from)}</p>
                                 </div>
                             )}
                         </div>
@@ -425,7 +438,7 @@ export default function PostDetail() {
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-5 w-5 text-purple-600" />
-                                    <p className="font-semibold text-lg text-gray-900">{post.to}</p>
+                                    <p className="font-semibold text-lg text-gray-900">{formatLocation(post.to)}</p>
                                 </div>
                             )}
                         </div>
@@ -658,7 +671,7 @@ export default function PostDetail() {
                                 <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Route</span>
                                     <span className="font-semibold text-gray-900">
-                                        {post.from.split(',')[0]} → {post.to.split(',')[0]}
+                                        {formatLocation(post.from, true)} → {formatLocation(post.to, true)}
                                     </span>
                                 </div>
                                 {!isTravel && (

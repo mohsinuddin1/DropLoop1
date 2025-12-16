@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import IDUpload from './IDUpload';
 import { X } from 'lucide-react';
 
@@ -20,6 +20,7 @@ export default function FirstTimeIDVerificationModal() {
         const checkFirstTimeUser = async () => {
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
+
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     setUserProfile(userData);
@@ -29,6 +30,11 @@ export default function FirstTimeIDVerificationModal() {
                     // 2. User hasn't skipped verification
                     const shouldShow = !userData.idVerification && !userData.idVerificationSkipped;
                     setShowModal(shouldShow);
+                } else {
+                    // New user - document doesn't exist yet
+                    // Show the modal for ID verification
+                    console.log('New user detected - showing ID verification modal');
+                    setShowModal(true);
                 }
             } catch (error) {
                 console.error('Error checking user verification status:', error);
@@ -45,10 +51,11 @@ export default function FirstTimeIDVerificationModal() {
 
         try {
             // Mark that user has skipped ID verification
-            await updateDoc(doc(db, 'users', user.uid), {
+            // Use setDoc with merge to work for both new and existing users
+            await setDoc(doc(db, 'users', user.uid), {
                 idVerificationSkipped: true,
                 idVerificationSkippedAt: new Date()
-            });
+            }, { merge: true });
             setShowModal(false);
         } catch (error) {
             console.error('Error skipping ID verification:', error);
@@ -59,10 +66,11 @@ export default function FirstTimeIDVerificationModal() {
         if (!user) return;
 
         try {
-            await updateDoc(doc(db, 'users', user.uid), {
+            // Use setDoc with merge to work for both new and existing users
+            await setDoc(doc(db, 'users', user.uid), {
                 idVerification: idData,
                 idVerificationSkipped: false // Reset skip flag if they decide to verify
-            });
+            }, { merge: true });
             setShowModal(false);
         } catch (error) {
             console.error('Error saving ID verification:', error);

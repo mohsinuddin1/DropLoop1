@@ -52,10 +52,18 @@ export default function Posts() {
             matchesFilter = post.type === 'item'; // Travelers see items to deliver
         }
 
+        // Helper function to safely convert value to searchable string
+        const toSearchString = (value) => {
+            if (!value) return '';
+            if (typeof value === 'string') return value.toLowerCase();
+            if (typeof value === 'object') return JSON.stringify(value).toLowerCase();
+            return String(value).toLowerCase();
+        };
+
         const matchesSearch =
-            post.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            post.to.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (post.itemName && post.itemName.toLowerCase().includes(searchTerm.toLowerCase()));
+            toSearchString(post.from).includes(searchTerm.toLowerCase()) ||
+            toSearchString(post.to).includes(searchTerm.toLowerCase()) ||
+            (post.itemName && toSearchString(post.itemName).includes(searchTerm.toLowerCase()));
 
         return matchesFilter && matchesSearch;
     });
