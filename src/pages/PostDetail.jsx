@@ -81,50 +81,60 @@ export default function PostDetail() {
 
     const handleAcceptBid = async (bid) => {
         try {
-            // 1. Update Bid Status
-            await updateDoc(doc(db, 'bids', bid.id), { status: 'accepted' });
-
-            // 2. Check if chat already exists
-            const chatsRef = collection(db, 'chats');
-            const q = query(chatsRef, where('participants', 'array-contains', user.uid));
-            const querySnapshot = await getDocs(q);
-            let chatExists = false;
-            let chatId = null;
-
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                if (data.participants.includes(bid.bidderId)) {
-                    chatExists = true;
-                    chatId = docSnap.id;
-                }
+            // 1. Update Bid Status (this is the critical operation)
+            await updateDoc(doc(db, 'bids', bid.id), {
+                status: 'accepted',
+                updatedAt: serverTimestamp() // Add timestamp so notification listener can detect recent changes
             });
 
-            // 3. Create Chat if not exists
-            if (!chatExists) {
-                const newChat = await addDoc(collection(db, 'chats'), {
-                    participants: [user.uid, bid.bidderId],
-                    participantNames: {
-                        [user.uid]: user.displayName,
-                        [bid.bidderId]: bid.bidderName
-                    },
-                    lastMessage: "Bid Accepted! You can now chat.",
-                    updatedAt: serverTimestamp(),
-                    createdAt: serverTimestamp()
+            // 2. Non-critical: Check if chat already exists and create if needed
+            // Wrap in try-catch so failure doesn't show error to user
+            try {
+                const chatsRef = collection(db, 'chats');
+                const q = query(chatsRef, where('participants', 'array-contains', user.uid));
+                const querySnapshot = await getDocs(q);
+                let chatExists = false;
+
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.participants.includes(bid.bidderId)) {
+                        chatExists = true;
+                    }
                 });
-                chatId = newChat.id;
+
+                // 3. Create Chat if not exists
+                if (!chatExists) {
+                    await addDoc(collection(db, 'chats'), {
+                        participants: [user.uid, bid.bidderId],
+                        participantNames: {
+                            [user.uid]: user.displayName,
+                            [bid.bidderId]: bid.bidderName
+                        },
+                        lastMessage: "Bid Accepted! You can now chat.",
+                        updatedAt: serverTimestamp(),
+                        createdAt: serverTimestamp()
+                    });
+                }
+            } catch (chatError) {
+                console.warn("Chat creation failed (non-critical):", chatError);
+                // Don't show error to user - bid was still accepted
             }
 
-            // 4. Notify the bidder
-            addNotification({
-                id: `bid-accepted-${bid.id}-${Date.now()}`,
-                type: 'bid_accepted',
-                title: '🎉 Bid Accepted!',
-                message: `Your bid of ₹${bid.amount} has been accepted! You can now chat.`,
-                bidId: bid.id,
-                postId: bid.postId,
-                timestamp: new Date(),
-                read: false
-            });
+            // 4. Non-critical: Show local notification (bidder gets their own via NotificationContext listener)
+            try {
+                addNotification({
+                    id: `bid-accepted-${bid.id}-${Date.now()}`,
+                    type: 'bid_accepted',
+                    title: '🎉 Bid Accepted!',
+                    message: `You accepted ${bid.bidderName}'s bid of ₹${bid.amount}.`,
+                    bidId: bid.id,
+                    postId: bid.postId,
+                    timestamp: new Date(),
+                    read: false
+                });
+            } catch (notifError) {
+                console.warn("Notification failed (non-critical):", notifError);
+            }
 
             // 5. Navigate to messages
             navigate('/messages');
