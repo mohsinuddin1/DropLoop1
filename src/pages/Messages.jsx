@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp,
 import { Send, Search, Plus, Paperclip, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { uploadImage } from '../utils/uploadImage';
+import SEO from '../components/SEO';
 
 export default function Messages() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -272,6 +273,7 @@ export default function Messages() {
 
     return (
         <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
+            <SEO title="Messages" noindex={true} />
             {/* Chat List */}
             <div className={`${mobileView === 'list' ? 'flex' : 'hidden'
                 } md:flex w-full md:w-80 flex-col border-r border-gray-200 bg-white`}>

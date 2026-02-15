@@ -133,7 +133,7 @@ export default function LocationAutocomplete({
                         onChange={handleInputChange}
                         onFocus={() => query.length >= 2 && !showManualEntry && setShowSuggestions(true)}
                         placeholder={placeholder}
-                        className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                        className="block w-full pl-10 pr-10 py-2.5 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
                         autoComplete="off"
                         disabled={showManualEntry}
                     />

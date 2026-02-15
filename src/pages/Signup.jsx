@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, User, Phone } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function Signup() {
     const [email, setEmail] = useState('');
@@ -45,6 +46,11 @@ export default function Signup() {
 
     return (
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <SEO
+                title="Sign Up – Join DropLoop"
+                description="Create a free DropLoop account to start sending packages with travelers or earn money delivering items along your travel route."
+                path="/signup"
+            />
             <div className="w-full max-w-md">
                 {/* Header */}
                 <div className="text-center mb-8">

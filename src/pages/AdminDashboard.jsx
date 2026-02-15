@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { IDVerificationTab } from '../components/IDVerificationTab';
 import { ManualCitiesTab } from '../components/ManualCitiesTab';
+import SEO from '../components/SEO';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'mohsinuddin64@gmail.com';
 
@@ -361,6 +362,7 @@ export default function AdminDashboard() {
 
     return (
         <div className="max-w-7xl mx-auto pb-8">
+            <SEO title="Admin Dashboard" noindex={true} />
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">

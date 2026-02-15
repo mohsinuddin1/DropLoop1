@@ -1,0 +1,25 @@
+{
+    "name": "DropLoop – Peer-to-Peer Delivery",
+    "short_name": "DropLoop",
+    "description": "Send packages with travelers heading your way. Faster and cheaper than traditional couriers.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#06b6d4",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "en",
+    "categories": [
+        "business",
+        "lifestyle",
+        "shopping"
+    ],
+    "icons": [
+        {
+            "src": "/favicon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

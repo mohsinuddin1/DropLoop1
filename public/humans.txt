@@ -1,0 +1,18 @@
+/* TEAM */
+Platform: DropLoop
+URL: https://droploop.me
+Contact: via website
+Location: India
+
+/* TECHNOLOGY */
+Frontend: React 19, Vite 7, Tailwind CSS 3
+Backend: Firebase (Auth, Firestore, Storage)
+Storage: Supabase
+Hosting: Vercel
+Analytics: Vercel Analytics, Umami
+
+/* SITE */
+Last update: 2026-02-15
+Language: English
+Standards: HTML5, CSS3, ES2020+
+Software: Visual Studio Code

@@ -6,6 +6,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Plane, Package, Calendar, MapPin, Weight, Clock, Image as ImageIcon, Loader } from 'lucide-react';
 import { uploadImage } from '../utils/uploadImage';
 import LocationAutocomplete from '../components/LocationAutocomplete';
+import SEO from '../components/SEO';
 
 export default function CreatePost() {
     const { user } = useAuth();
@@ -97,6 +98,11 @@ export default function CreatePost() {
 
     return (
         <div className="max-w-4xl mx-auto">
+            <SEO
+                title="Create a Post – Send or Travel"
+                description="Create a delivery request or share your travel route on DropLoop. Connect with senders or travelers and earn money."
+                path="/create"
+            />
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Create a Post</h1>

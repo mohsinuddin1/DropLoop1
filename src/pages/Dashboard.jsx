@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTim
 import { format } from 'date-fns';
 import { Package, TrendingUp, CheckCircle, Clock, MessageSquare } from 'lucide-react';
 import ReviewModal from '../components/ReviewModal';
+import SEO from '../components/SEO';
 
 export default function Dashboard() {
     const { user } = useAuth();
@@ -173,6 +174,7 @@ export default function Dashboard() {
 
     return (
         <div className="max-w-7xl mx-auto">
+            <SEO title="Dashboard" noindex={true} />
             {/* Header */}
             <div className="mb-4 sm:mb-6 md:mb-8">
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>

@@ -1,0 +1,49 @@
+# DropLoop – Peer-to-Peer Delivery Platform
+> Send Anything, Anywhere. Connect senders with travelers for fast, affordable delivery.
+
+## About DropLoop
+DropLoop is a peer-to-peer delivery platform that connects people who need to send packages with travelers heading in the same direction. Instead of using expensive traditional courier services, users can leverage the travel plans of real people to get their items delivered faster and cheaper.
+
+## How It Works
+1. **Post or Browse**: Senders post items they need delivered with pickup and drop-off locations. Travelers post their upcoming travel routes.
+2. **Place Bids**: Travelers browse available delivery requests and place competitive bids on items they can carry along their route.
+3. **Complete & Review**: Once a bid is accepted, the sender and traveler coordinate via real-time messaging. After delivery, both parties leave verified reviews.
+
+## Key Features
+- **Free to use** – No listing fees. Senders and travelers negotiate delivery fees directly.
+- **Real-time messaging** – Chat instantly with travelers or senders to coordinate delivery.
+- **Verified user reviews** – 4.9+ star average rating from real deliveries builds trust.
+- **ID verification** – Users can verify their identity for added safety.
+- **Bidding system** – Travelers compete with bids, ensuring senders get the best price.
+- **50+ country coverage** – Works across India and internationally.
+- **Dark mode support** – Comfortable browsing experience in any lighting.
+
+## Who Is DropLoop For?
+- **Senders**: Anyone who needs to send a package — documents, electronics, gifts, personal items — to another city or country.
+- **Travelers**: People who are already traveling and want to earn extra money by carrying packages along their route.
+- **Students**: Students moving between cities who can carry items for others.
+- **Businesses**: Small businesses needing affordable delivery options.
+
+## Platform Statistics
+- 10,000+ items delivered
+- 5,000+ active travelers
+- 4.9/5 average user rating
+- Coverage across 50+ countries
+
+## Safety & Trust
+DropLoop prioritizes safety with:
+- Government ID verification for users
+- Transparent review and rating system
+- Real-time messaging for coordination
+- Detailed user profiles with delivery history
+
+## Technology
+DropLoop is built as a modern web application using React, Firebase (authentication and real-time database), and Supabase (image storage). The platform is optimized for both mobile and desktop experiences.
+
+## Website
+- URL: https://droploop.me
+- Type: Web Application (React SPA)
+- Availability: 24/7 worldwide access
+
+## Contact
+Visit https://droploop.me to get started or browse available delivery requests.

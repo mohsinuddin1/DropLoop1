@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { PageLoader } from './components/Loading';
@@ -80,6 +81,7 @@ function App() {
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>
+      <Analytics />
     </ErrorBoundary>
   );
 }

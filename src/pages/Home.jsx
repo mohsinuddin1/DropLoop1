@@ -1,9 +1,15 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Package, MapPin, MessageCircle, TrendingUp, Users, Star } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function Home() {
     return (
         <div className="min-h-screen bg-background">
+            <SEO
+                title=""
+                description="DropLoop connects senders with travelers for fast, affordable peer-to-peer delivery across India and 50+ countries. Post a package, browse travel routes, bid, chat, and deliver."
+                path="/"
+            />
             {/* Hero Section */}
             <section className="relative overflow-hidden px-4 py-24 sm:px-6 lg:px-8">
                 <div className="absolute inset-0 -z-10 overflow-hidden">

@@ -6,6 +6,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import PostCard from '../components/PostCard';
 import BidModal from '../components/BidModal';
 import { Search, Filter } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function Posts() {
     const navigate = useNavigate();
@@ -80,6 +81,11 @@ export default function Posts() {
 
     return (
         <div className="max-w-7xl mx-auto">
+            <SEO
+                title="Browse Delivery Requests & Travel Routes"
+                description="Find items to deliver or travelers heading your way. Browse peer-to-peer delivery requests, place bids, and earn money while traveling with DropLoop."
+                path="/posts"
+            />
             {/* Header */}
             <div className="mb-12">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">

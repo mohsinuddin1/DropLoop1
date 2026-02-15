@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { auth } from '../firebase/config';
 import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -70,6 +71,11 @@ export default function Login() {
 
     return (
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <SEO
+                title="Sign In"
+                description="Sign in to your DropLoop account to send packages, browse travel routes, and manage your deliveries."
+                path="/login"
+            />
             <div className="w-full max-w-md">
                 {/* Header */}
                 <div className="text-center mb-8">

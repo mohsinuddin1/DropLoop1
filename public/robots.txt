@@ -1,0 +1,67 @@
+# DropLoop Robots.txt
+# https://droploop.me
+
+# Allow all search engines to crawl
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /messages
+Disallow: /dashboard
+
+# Allow Google specific crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+# Allow Bing
+User-agent: Bingbot
+Allow: /
+
+# Allow social media crawlers (for rich link previews)
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
+# Allow AI/LLM crawlers (AEO & LLM optimization)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Allow: /
+
+# Sitemap
+Sitemap: https://droploop.me/sitemap.xml
+
+# Host
+Host: https://droploop.me

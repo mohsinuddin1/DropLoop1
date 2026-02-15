@@ -20,9 +20,6 @@ export default function Layout() {
 
             {/* First-time ID Verification Modal */}
             <FirstTimeIDVerificationModal />
-
-            {/* Umami Analytics - global */}
-            <script defer src="https://cloud.umami.is/script.js" data-website-id="bbe412dc-3619-4d48-8553-a71aff81d043"></script>
         </div>
     );
 }
