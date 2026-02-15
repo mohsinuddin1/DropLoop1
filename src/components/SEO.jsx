@@ -1,15 +1,7 @@
-import { Helmet } from 'react-helmet-async';
-
 /**
  * SEO Component for dynamic per-page meta tags
- * 
- * Features:
- * - Dynamic title with site name suffix
- * - Open Graph meta tags for social sharing
- * - Twitter Card meta tags
- * - Canonical URL
- * - JSON-LD structured data (optional)
- * - AEO-friendly meta descriptions
+ * Uses React 19's native head hoisting — <title>, <meta>, <link> are
+ * automatically moved to <head> when rendered anywhere in the tree.
  * 
  * @param {object} props
  * @param {string} props.title - Page title
@@ -35,7 +27,7 @@ export default function SEO({
     const canonicalUrl = `${siteUrl}${path}`;
 
     return (
-        <Helmet>
+        <>
             {/* Primary Meta Tags */}
             <title>{fullTitle}</title>
             <meta name="description" content={description} />
@@ -63,6 +55,6 @@ export default function SEO({
                     {JSON.stringify(structuredData)}
                 </script>
             )}
-        </Helmet>
+        </>
     );
 }
