@@ -7,6 +7,9 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      },
       colors: {
         primary: '#06b6d4', // Cyan 500
         secondary: '#64748B', // Slate 500
@@ -36,6 +39,9 @@ export default {
         'fade-in-up': 'fade-in-up 0.5s ease-out',
         'animation-delay-2000': 'blob 7s infinite 2s',
         'animation-delay-4000': 'blob 7s infinite 4s',
+      },
+      transitionDuration: {
+        '400': '400ms',
       },
     },
   },
