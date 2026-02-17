@@ -9,6 +9,8 @@ import BidModal from '../components/BidModal';
 import { useNotifications } from '../context/NotificationContext';
 import { uploadImage } from '../utils/uploadImage';
 
+import SEO from '../components/SEO';
+
 export default function PostDetail() {
     const { postId } = useParams();
     const navigate = useNavigate();
@@ -283,8 +285,41 @@ export default function PostDetail() {
         }
     };
 
+    // Construct dynamic SEO data
+    const seoTitle = post
+        ? (isTravel
+            ? `Travel to ${formatLocation(post.to, true)}`
+            : `Deliver ${post.itemName} to ${formatLocation(post.to, true)}`)
+        : 'Loading...';
+
+    const seoDescription = post
+        ? (isTravel
+            ? `Traveler heading to ${formatLocation(post.to)}. Can carry ${post.weightCapacity || 'packages'}. Bid now on DropLoop.`
+            : `Can you deliver ${post.itemName} to ${formatLocation(post.to)}? Earn money traveling. Bid now on DropLoop.`)
+        : 'View delivery request details on DropLoop.';
+
     return (
         <div className="max-w-6xl mx-auto">
+            {post && (
+                <SEO
+                    title={seoTitle}
+                    description={seoDescription}
+                    path={`/posts/${postId}`}
+                    image={post.imageUrl || 'https://droploop.me/og-image.png'}
+                    type="article"
+                    structuredData={{
+                        "@context": "https://schema.org",
+                        "@type": isTravel ? "Service" : "Product",
+                        "name": isTravel ? `Travel to ${formatLocation(post.to)}` : post.itemName,
+                        "description": post.description || seoDescription,
+                        "offers": {
+                            "@type": "Offer",
+                            "price": post.offerPrice || "0",
+                            "priceCurrency": "INR"
+                        }
+                    }}
+                />
+            )}
             <div className="grid gap-8 lg:grid-cols-3">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">

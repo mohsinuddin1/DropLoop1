@@ -141,8 +141,8 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-white overflow-hidden">
             <SEO
-                title=""
-                description="DropLoop connects senders with travelers for fast, affordable peer-to-peer delivery across India and 50+ countries. Post a package, browse travel routes, bid, chat, and deliver."
+                title="Peer-to-Peer Delivery"
+                description="DropLoop connects senders with travelers for fast, affordable peer-to-peer delivery across India and 50+ countries. Send anything, anywhere, shop overseas, or earn money traveling. Post a package, browse routes, bid, chat, and deliver."
                 path="/"
             />
 
